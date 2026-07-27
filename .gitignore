@@ -21,3 +21,23 @@ dist/
 # --- Isletim sistemi dosyalari ---
 .DS_Store
 Thumbs.db
+
+# STM32CubeIDE workspace files
+.metadata/
+*.launch
+
+# STM32CubeIDE build outputs
+Debug/
+Release/
+
+# STM32 build artifacts
+*.o
+*.d
+*.su
+*.cyclo
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.lst
