@@ -10,6 +10,16 @@
 
 ---
 
+## Pre-built Application Downloads
+
+Pre-built Windows and Linux packages are distributed through the public release repository:
+
+**[Download ATEK RF Modules UI](https://github.com/sydundar/atek-rf-modules-ui-releases/releases/latest)**
+
+This repository contains the application and firmware development sources.  
+End users who only need the desktop application should use the release repository above.
+
+
 ## Overview
 
 This repository contains:
