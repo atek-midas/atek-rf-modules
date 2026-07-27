@@ -1,0 +1,23 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Virtual environment ---
+.venv/
+venv/
+env/
+
+# --- IDE ---
+.idea/
+.vscode/
+
+# --- PyInstaller build cikti ---
+build/
+dist/
+*.spec
+
+# --- Isletim sistemi dosyalari ---
+.DS_Store
+Thumbs.db
