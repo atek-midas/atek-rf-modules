@@ -13,12 +13,12 @@ env/
 .idea/
 .vscode/
 
-# --- PyInstaller build cikti ---
+# --- PyInstaller build outputs ---
 build/
 dist/
 *.spec
 
-# --- Isletim sistemi dosyalari ---
+# --- Operating system files ---
 .DS_Store
 Thumbs.db
 
