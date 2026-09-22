@@ -14,6 +14,107 @@ Industrial Design | Full OOP Architecture | Thread-Safe Communication | Embedded
 Communication is handled by atek_rf_modules_scpi_api.py (must be in the same folder).
 """
 
+# ---------------------------------------------------------
+# ERROR LOGGING
+# The packaged application has no console window, so unexpected errors are
+# written to error_log.txt and reported to the user with a message box.
+# Installed before the other imports so that startup errors are captured too.
+# ---------------------------------------------------------
+import os
+import sys
+import threading
+import traceback
+import datetime
+import platform
+
+ERROR_LOG_NAME = "error_log.txt"
+_error_dialog_shown = False
+
+
+def _error_log_folders():
+    """Next to the executable / script first, then a per-user folder (always writable)."""
+    if getattr(sys, "frozen", False):
+        yield os.path.dirname(sys.executable)
+    else:
+        yield os.path.dirname(os.path.abspath(__file__))
+    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    yield os.path.join(base, "ATEK_RF_MODULES_UI")
+
+
+def write_error_log(exc_type, exc_value, exc_tb, context=""):
+    """Append the error to error_log.txt. Returns the file path, or None if it could not be written."""
+    try:
+        details = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    except Exception:
+        details = f"{exc_type}: {exc_value}\n"
+    text = (
+        "=" * 70 + "\n"
+        f"Time     : {datetime.datetime.now().isoformat(sep=' ', timespec='seconds')}\n"
+        f"Context  : {context}\n"
+        f"App      : {globals().get('APP_VERSION', '?')}\n"
+        f"System   : {platform.platform()} | Python {platform.python_version()} | "
+        f"{'packaged' if getattr(sys, 'frozen', False) else 'source'}\n"
+        + "-" * 70 + "\n" + details + "\n"
+    )
+    for folder in _error_log_folders():
+        try:
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, ERROR_LOG_NAME)
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(text)
+            return path
+        except Exception:
+            continue
+    return None
+
+
+def show_error_dialog(log_path):
+    """Tell the user once per session where the error details were saved."""
+    global _error_dialog_shown
+    if _error_dialog_shown:
+        return
+    _error_dialog_shown = True
+    if log_path:
+        msg = ("An unexpected error occurred.\n\n"
+               f"Details were saved to:\n{log_path}\n\n"
+               "Please send this file to ATEK MIDAS support.")
+    else:
+        msg = "An unexpected error occurred.\n\nThe error details could not be saved."
+    try:
+        import tkinter
+        import tkinter.messagebox
+        parent = getattr(tkinter, "_default_root", None)
+        temp_root = None
+        if parent is None:
+            temp_root = tkinter.Tk()
+            temp_root.withdraw()
+            parent = temp_root
+        tkinter.messagebox.showerror("ATEK RF Modules - Error", msg, parent=parent)
+        if temp_root is not None:
+            temp_root.destroy()
+    except Exception:
+        pass
+
+
+def handle_exception(exc_type, exc_value, exc_tb, context="", show_dialog=True):
+    try:
+        if issubclass(exc_type, KeyboardInterrupt):
+            sys.__excepthook__(exc_type, exc_value, exc_tb)
+            return
+        log_path = write_error_log(exc_type, exc_value, exc_tb, context)
+        if show_dialog:
+            show_error_dialog(log_path)
+    except Exception:
+        pass
+
+
+# Unhandled errors in the main program (including startup)
+sys.excepthook = lambda t, v, tb: handle_exception(t, v, tb, "Unhandled exception")
+# Errors in background threads: log only (message boxes must run in the main thread)
+threading.excepthook = lambda args: handle_exception(
+    args.exc_type, args.exc_value, args.exc_traceback,
+    f"Thread '{args.thread.name if args.thread else '?'}'", show_dialog=False)
+
 import customtkinter as ctk
 import time
 import queue
@@ -623,6 +724,10 @@ class App(ctk.CTk):
         self.log_box.insert("end", "System Initialized. Awaiting Hardware Connection...\n")
 
         self.refresh_ports()
+
+    def report_callback_exception(self, exc_type, exc_value, exc_tb):
+        # Errors inside button, timer or other Tk callbacks: log them, keep the application running
+        handle_exception(exc_type, exc_value, exc_tb, "UI callback")
 
     def show_about(self):
         if self.about_window is not None and self.about_window.winfo_exists():

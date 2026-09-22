@@ -44,3 +44,6 @@ Release/
 
 # STM32CubeIDE local settings
 firmware/.settings/
+
+# UI error logs
+error_log.txt
