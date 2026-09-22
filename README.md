@@ -12,12 +12,33 @@
 
 ## Pre-built Application Downloads
 
-Pre-built Windows and Linux packages are distributed through the public release repository:
+Ready-to-run Windows and Linux packages are published on the Releases page of this repository:
 
-**[Download ATEK RF Modules UI](https://github.com/sydundar/atek-rf-modules-ui-releases/releases/latest)**
+**[Download ATEK RF Modules UI](https://github.com/atek-midas/atek-rf-modules/releases/latest)**
 
-This repository contains the application and firmware development sources.  
-End users who only need the desktop application should use the release repository above.
+| Package | System requirements |
+|---|---|
+| `ATEK_RF_MODULES_UI_v<version>_windows_x64.zip` | Windows 10 or 11, 64-bit |
+| `ATEK_RF_MODULES_UI_v<version>_linux_x64.tar.gz` | 64-bit Linux, glibc 2.35 or newer (e.g. Ubuntu 22.04 and later) |
+
+No Python installation is required.
+
+**Windows:** extract the zip file and run `ATEK_RF_MODULES_UI.exe` from the extracted folder.
+
+**Linux:**
+
+```bash
+tar -xzf ATEK_RF_MODULES_UI_v<version>_linux_x64.tar.gz
+./ATEK_RF_MODULES_UI/ATEK_RF_MODULES_UI
+```
+
+On Linux, the user needs access to the serial port. If the module cannot be opened, run the following command once and log out and back in:
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+Keep the extracted folder together; the executable alone does not run. If the application reports an unexpected error, it saves the details to `error_log.txt`; please include this file when contacting ATEK MIDAS support.
 
 ## Overview
 
@@ -124,6 +145,10 @@ atek-rf-modules/
 │   ├── ATEK656N5.pdf
 │   ├── ATEK888P5.pdf
 │   └── ATEK950P6.pdf
+│
+├── .github/
+│   └── workflows/
+│       └── release.yml                     # Automated Windows/Linux builds and releases
 │
 ├── README.md
 ├── LICENSE
@@ -468,6 +493,28 @@ UI/dist/ATEK_RF_MODULES_UI/
 ```
 
 Do not distribute only the executable file.
+
+Build on the oldest Linux distribution you want to support: the package runs on the build distribution and newer ones, but not on older ones.
+
+---
+
+## Automated Builds and Releases
+
+The workflow in `.github/workflows/release.yml` builds the Windows and Linux packages on GitHub's servers.
+
+**Test build (no release):** open the **Actions** tab, select **Build and release UI** and click **Run workflow**. The packages are available under **Artifacts** on the run page.
+
+**Release:**
+
+1. Update `APP_VERSION` in `UI/ATEK_RF_MODULES_USER_INTERFACE.py`, commit and push.
+2. Create and push a tag with the same version:
+
+```bash
+git tag v2.1.0
+git push origin v2.1.0
+```
+
+The workflow checks that the tag matches `APP_VERSION`, builds both packages (Linux on Ubuntu 22.04 for wide compatibility) and publishes them as a GitHub Release.
 
 ---
 
