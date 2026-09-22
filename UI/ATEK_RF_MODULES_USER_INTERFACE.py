@@ -53,7 +53,7 @@ MODULES = {
         "type": "attenuator", "icon": "►", "datasheet": "ATEK357P4.pdf"
     },
     "ATEK1801": {
-        "hw_id": "ATEK888P5",
+        "hw_id": "ATEK1801",
         "name": "20-550 MHz 32-State USB-Controlled Low Pass Filter",
         "type": "tunable_lpf", "icon": "▱", "datasheet": "ATEK888P5.pdf"
     },
@@ -62,7 +62,7 @@ MODULES = {
         "type": "filterbank_8", "icon": "≡", "datasheet": "ATEK950P6.pdf"
     },
     "ATEK1601": {
-        "hw_id": "ATEK656N5",
+        "hw_id": "ATEK1601",
         "name": "2-18 GHz Sub-Octave USB-Controlled Filter Bank",
         "type": "filterbank_6", "icon": "≣", "datasheet": "ATEK656N5.pdf"
     },
@@ -183,8 +183,12 @@ class BasePanel(ctk.CTkFrame):
         top_row.pack(fill="x", padx=15, pady=(15, 5))
 
         ctk.CTkLabel(top_row, text=f"{self.info['icon']}  {self.module_id}", font=("Courier New", 24, "bold"), text_color=COLORS["accent"]).pack(side="left")
-        ctk.CTkButton(top_row, text="📄 Open Datasheet", width=140, fg_color=COLORS["bg_element"], border_width=1, border_color=COLORS["border"], hover_color=COLORS["border"], command=lambda: open_embedded_pdf(self.info["datasheet"], self.log_callback)).pack(side="right")
-
+        ctk.CTkButton(top_row, text="📄 Open Datasheet", width=140,
+                      fg_color=COLORS["bg_element"],
+                      text_color=COLORS["text_main"],  # <-- THIS WAS ADDED
+                      border_width=1, border_color=COLORS["border"],
+                      hover_color=COLORS["border"],
+                      command=lambda: open_embedded_pdf(self.info["datasheet"], self.log_callback)).pack(side="right")
         ctk.CTkLabel(header, text=self.info["name"], font=("Courier New", 12), text_color=COLORS["text_muted"]).pack(anchor="w", padx=15, pady=(0, 15))
 
     def create_card(self):
@@ -253,7 +257,7 @@ class TunableLPFPanel(BasePanel):
         super().__init__(master, engine, module_id, log_callback, **kwargs)
         self.frequencies = [
             27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112,
-            150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 530
+            150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 550
         ]
         self.build_ui()
 

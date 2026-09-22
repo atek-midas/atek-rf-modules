@@ -101,27 +101,27 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   bool DisplayPresent = false;
 
-  //if(HAL_I2C_IsDeviceReady(&hi2c1, SSD1306_I2C_ADDR, 3, 100) == HAL_OK) {
+  if(HAL_I2C_IsDeviceReady(&hi2c1, SSD1306_I2C_ADDR, 3, 100) == HAL_OK) {
 
 	  DisplayPresent = true;
       HW_Init();
       HW_PlayBootAnimation();
 
-    //}
+   }
 
 
 
   // AKTİF MODÜLÜ BURADAN SEÇİN:
   /*
-  	  ATEK256N3 — SPDT Switch (1 CTRL pini, HIGH/LOW)
-  	  ATEK357P4 — 5-bit Attenuator (P1–P5)
-  	  ATEK366P5 — Analog Phase Shifter (DAC ile süruluyor, 0–10V)
+  ATEK256N3 — SPDT Switch (1 CTRL pini, HIGH/LOW)
+  ATEK357P4 — 5-bit Attenuator (P1–P5)
+  ATEK366P5 — Analog Phase Shifter (DAC ile süruluyor, 0–10V)
   ATEK656N5 — Switchable Filterbank (CTRLA/B/C, negatif voltaj –5V)
   ATEK888P5 — Tunable LPF (CTRL1–5)
-  	  ATEK950P6 — Switchable Filter Bank (CTRLA/B/C)
+  ATEK950P6 — Switchable Filter Bank (CTRLA/B/C)
   */
 
-  RF_Init(ATEK888P5);
+  RF_Init(ATEK1601);
   while (1)
   {
     /* USER CODE END WHILE */

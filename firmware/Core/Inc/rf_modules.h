@@ -6,12 +6,12 @@
 
 // Modül Listesi
 typedef enum {
-  ATEK357P4,  // 5-Bit Attenuator
-  ATEK888P5,  // Tunable LPF
-  ATEK950P6,  // Filterbank 8
-  ATEK656N5,  // Filterbank 6
-  ATEK256N3,  // SPDT Switch
-  ATEK366P5   // Phase Shifter (DAC)
+  ATEK357P4,  	// 5-Bit Attenuator 	, Chip MFG#:
+  ATEK1801,  	// Tunable LPF 			, Chip MFG#: ATEK888P5
+  ATEK950P6,  	// Filterbank 8 		, Chip MFG#:
+  ATEK1601,  	// Filterbank 6 		,  Chip MFG#: ATEK656N5
+  ATEK256N3,  	// SPDT Switch 			, Chip MFG#:
+  ATEK366P5   	// Phase Shifter (DAC) 	, Chip MFG#:
 } ModuleType_t;
 
 // Projedeki Tüm Fonksiyon Prototipleri

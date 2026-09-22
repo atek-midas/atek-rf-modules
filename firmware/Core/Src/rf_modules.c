@@ -106,7 +106,7 @@ const uint8_t atek950p6_codes[] = {0x00, 0x06, 0x04, 0x05, 0x02, 0x01, 0x03, 0x0
 
 const char* atek950p6_freqs[] = {"485 - 810", "670 - 1125", "960 - 1670", "1440-2560", "2140-3850", "3300-5880", "4820-8500", "2 - 9000"};
 
-const uint8_t atek656n5_codes[] = {0x00, 0x05, 0x02, 0x03, 0x01, 0x04};
+const uint8_t ATEK1601_codes[] = {0x00, 0x05, 0x02, 0x03, 0x01, 0x04};
 const char* atek656n5_freqs[] = {"1.9 - 3.5", "2.8 - 5.4", "4.5 - 9.1", "7.1 - 12.3", "9.9 - 15.3", "12.5 - 18"};
 
 const uint16_t atek888p5_freqs[] = {27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112, 150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 530};
@@ -118,7 +118,7 @@ const uint8_t atek357p4_codes[] = {
   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F
 };
 
-const uint8_t atek888p5_codes[] = {
+const uint8_t ATEK1801_codes[] = {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F
 };
@@ -130,9 +130,9 @@ void RF_Init(ModuleType_t module) {
 
   switch (current_module) {
     case ATEK357P4: max_states = 32; break;
-    case ATEK888P5: max_states = 32; break;
+    case ATEK1801: max_states = 32; break;
     case ATEK950P6: max_states = 8;  break;
-    case ATEK656N5: max_states = 6;  break;
+    case ATEK1601: max_states = 6;  break;
     case ATEK256N3: max_states = 2;  break;
     case ATEK366P5: max_states = 101; break;
   }
@@ -205,8 +205,8 @@ void RF_Update(void) {
             HW_UpdateDisplay(top_val, main_val, false);
             break;
 
-        case ATEK888P5:
-            HW_SetCtrlPins(modules[current_module].ctrl_pins, atek888p5_codes[current_state], modules[current_module].num_pins);
+        case ATEK1801:
+            HW_SetCtrlPins(modules[current_module].ctrl_pins, ATEK1801_codes[current_state], modules[current_module].num_pins);
             snprintf(top_val, sizeof(top_val), "B%d (MHz)", current_state + 1);
             snprintf(main_val, sizeof(main_val), "%d", atek888p5_freqs[current_state]);
             HW_UpdateDisplay(top_val, main_val, false);
@@ -223,8 +223,8 @@ void RF_Update(void) {
             HW_UpdateDisplay(top_val, main_val, false);
             break;
 
-        case ATEK656N5:
-            HW_SetCtrlPins(modules[current_module].ctrl_pins, atek656n5_codes[current_state], modules[current_module].num_pins);
+        case ATEK1601:
+            HW_SetCtrlPins(modules[current_module].ctrl_pins, ATEK1601_codes[current_state], modules[current_module].num_pins);
             snprintf(top_val, sizeof(top_val), "B%d (GHz)", current_state + 1);
             snprintf(main_val, sizeof(main_val), "%s", atek656n5_freqs[current_state]);
             HW_UpdateDisplay(top_val, main_val, false);
@@ -324,9 +324,9 @@ void RF_ProcessSerialCommand(void) {
         char response[32];
         switch(current_module) {
             case ATEK357P4: strcpy(response, "ATEK357P4\r\n"); break;
-            case ATEK888P5: strcpy(response, "ATEK888P5\r\n"); break;
+            case ATEK1801: strcpy(response, "ATEK1801\r\n"); break;
             case ATEK950P6: strcpy(response, "ATEK950P6\r\n"); break;
-            case ATEK656N5: strcpy(response, "ATEK656N5\r\n"); break;
+            case ATEK1601: strcpy(response, "ATEK1601\r\n"); break;
             case ATEK256N3: strcpy(response, "ATEK256N3\r\n"); break;
             case ATEK366P5: strcpy(response, "ATEK366P5\r\n"); break;
             default: strcpy(response, "UNKNOWN\r\n"); break;
