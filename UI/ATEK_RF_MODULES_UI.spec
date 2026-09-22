@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['ATEK_RF_MODULES_USER_INTERFACE_v2.0.py'],
+    ['ATEK_RF_MODULES_USER_INTERFACE.py'],
     pathex=[],
     binaries=[],
     datas=[],
