@@ -341,12 +341,7 @@ The default baud-rate selection in the UI is:
 ```text
 115200
 ```
-
-The UI also provides:
-
-```text
-9600
-```
+ 
 
 ---
 
@@ -504,18 +499,13 @@ PyInstaller may also generate temporary `.spec` files. These files are ignored b
 
 ## License
 
-This project is released under the MIT License.
-
-Copyright © 2026 ATEK MIDAS
-
-Permission is granted to use, copy, modify, merge, publish, distribute, sublicense, and sell copies of this software, subject to the terms of the included `LICENSE` file.
-
-See:
-
-```text
-LICENSE
-```
-
+- **Source code** (firmware sources written by ATEK MIDAS, Python API,
+  desktop UI, examples, build scripts): MIT License, see `LICENSE`.
+- **Third-party components** (STM32 HAL, CMSIS, STM32 USB Device Library,
+  SSD1306 driver, Python packages) remain under their own licenses,
+  see `THIRD_PARTY_NOTICES.md`.
+- **Datasheets, manuals, the ATEK MIDAS name and logo** are not covered by
+  the MIT License. © ATEK MIDAS, all rights reserved.
 for the complete license text.
 
 ---
