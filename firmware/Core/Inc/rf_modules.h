@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// Modül Listesi
+// RF Modules List
 typedef enum {
   ATEK357P4,  	// 5-Bit Attenuator 	, Chip MFG#:
   ATEK1801,  	// Tunable LPF 			, Chip MFG#: ATEK888P5
@@ -14,7 +14,7 @@ typedef enum {
   ATEK366P5   	// Phase Shifter (DAC) 	, Chip MFG#:
 } ModuleType_t;
 
-// Projedeki Tüm Fonksiyon Prototipleri
+
 void RF_Init(ModuleType_t module);
 void RF_HandleButtons(void);
 void RF_Update(void);

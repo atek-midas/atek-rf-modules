@@ -1,11 +1,10 @@
 #ifndef HW_H
 #define HW_H
 
-#include "stm32f0xx_hal.h" // STM32F0 serisi için HAL kütüphanesi
+#include "stm32f0xx_hal.h"
 #include <stdint.h>
 #include <stdbool.h>
 
-// --- PİN TANIMLAMALARI (Geçici Atamalar, İstediğin Gibi Değiştir) ---
 #define PORT_CTRL1 GPIOA
 #define PIN_CTRL1  GPIO_PIN_0
 
@@ -32,7 +31,7 @@ typedef struct {
     uint16_t pin;
 } IOPin_t;
 
-// Donanım Fonksiyon Prototipleri
+
 void HW_Init(void);
 void HW_PlayBootAnimation(void);
 void HW_SetCtrlPins(const IOPin_t* pins, uint8_t val, uint8_t num_pins);

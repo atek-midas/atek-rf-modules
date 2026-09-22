@@ -37,10 +37,10 @@ static const unsigned char font5x7[] = {
     0x00, 0x41, 0x36, 0x08, 0x00, 0x10, 0x08, 0x08, 0x10, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-// --- ADAFRUIT GFX MANTIĞIYLA ÇİZİM MOTORU ---
+// --- DRAWING ENGINE (ADAFRUIT GFX STYLE) ---
 void Custom_DrawChar(int16_t x, int16_t y, unsigned char c, uint8_t size) {
     if((x >= 64) || (y >= 32) || ((x + 6 * size - 1) < 0) || ((y + 8 * size - 1) < 0))
-        return; // Ekran dışı kırpma (Eksi koordinat koruması)
+        return; // Off-screen clipping (negative coordinate guard)
 
     if(c >= 128) c = 0;
     if(c >= 32) c -= 32; else c = 0;
@@ -49,10 +49,10 @@ void Custom_DrawChar(int16_t x, int16_t y, unsigned char c, uint8_t size) {
         uint8_t line = font5x7[c * 5 + i];
         for (int8_t j = 0; j<8; j++) {
             if (line & 0x1) {
-                if(size == 1) { // Size 1: İnce Yazı
+                if(size == 1) { // Size 1: thin text
                     if(x+i >= 0 && x+i < 64 && y+j >= 0 && y+j < 32)
                         ssd1306_DrawPixel(x+i, y+j, White);
-                } else { // Size > 1: Kalın Blok Yazı (Endüstriyel GFX Görünümü)
+                } else { // Size > 1: scaled block text
                     for(int dx=0; dx<size; dx++) {
                         for(int dy=0; dy<size; dy++) {
                             int16_t px = x + i*size + dx;
@@ -94,7 +94,7 @@ void HW_Init(void) {
 }
 
 void HW_SetCtrlPins(const IOPin_t* pins, uint8_t val, uint8_t num_pins) {
-    if (pins == NULL) return; // Güvenlik kontrolü (Örn: DAC modülü pin kullanmaz)
+    if (pins == NULL) return; // Safety check (e.g. DAC module has no control pins)
 
     for (int i = 0; i < num_pins; i++) {
         bool bit_val = (val >> i) & 0x01;
@@ -118,19 +118,19 @@ uint32_t HW_GetTicks(void) {
     return HAL_GetTick();
 }
 
-// --- EKRAN GÜNCELLEME (BİREBİR ESP32 MANTIĞI) ---
+// --- DISPLAY UPDATE (SAME LOGIC AS ESP32 VERSION) ---
 void HW_UpdateDisplay(const char* top_text, const char* main_text, bool is_degree) {
     ssd1306_Fill(Black);
 
     bool has_top = (top_text != NULL && strlen(top_text) > 0);
 
-    // 1. Üst Yazı ve Çizgi (Size 1 ile İnce)
+    // 1. Top text and separator line (size 1)
     if (has_top) {
         Custom_Print(0, 0, top_text, 1);
         ssd1306_Line(0, 10, 64, 10, White);
     }
 
-    // 2. Akıllı Font Boyutu
+    // 2. Automatic font size selection
     uint8_t text_size = 2;
 
     int len = strlen(main_text);
@@ -148,7 +148,7 @@ void HW_UpdateDisplay(const char* top_text, const char* main_text, bool is_degre
         }
     }
 
-    // 3. Ekrana Yazdırma (ESP32 Mantığı)
+    // 3. Render text (ESP32 logic)
     const char* newline_ptr = strchr(main_text, '\n');
 
     if (newline_ptr != NULL) {
@@ -179,7 +179,7 @@ void HW_UpdateDisplay(const char* top_text, const char* main_text, bool is_degre
 
         Custom_Print(x_pos, y_pos, main_text, text_size);
 
-        if (apply_bold) { // Size 1 için Bold efekti
+        if (apply_bold) { // Bold effect for size 1
             Custom_Print(x_pos + 1, y_pos, main_text, text_size);
         }
 
@@ -193,16 +193,16 @@ void HW_UpdateDisplay(const char* top_text, const char* main_text, bool is_degre
     ssd1306_UpdateScreen();
 }
 
-// --- ORİJİNAL GFX KAYAN ANİMASYONU ---
+// --- BOOT ANIMATION (ORIGINAL GFX SLIDE EFFECT) ---
 void HW_PlayBootAnimation(void) {
-    int targetY_ATEK = 0;   // ATEK için Y=0 (0 ile 15. pikseller arası)
-    int targetY_MIDAS = 16; // MIDAS için Y=16 (16 ile 31. pikseller arası - Tam sığıyor!)
+    int targetY_ATEK = 0;   // ATEK at Y=0 (pixels 0-15)
+    int targetY_MIDAS = 16; // MIDAS at Y=16 (pixels 16-31, fits exactly)
     int currentY_ATEK = -20;
     int currentY_MIDAS = 35;
     int x_ATEK = 8;
     int x_MIDAS = 2;
 
-    // 1. Aşama: Giriş
+    // Phase 1: slide in
     while (currentY_ATEK < targetY_ATEK || currentY_MIDAS > targetY_MIDAS) {
         ssd1306_Fill(Black);
         if (currentY_ATEK < targetY_ATEK) currentY_ATEK++;
@@ -215,7 +215,7 @@ void HW_PlayBootAnimation(void) {
 
     HAL_Delay(1200);
 
-    // 2. Aşama: Geri Dağılma
+    // Phase 2: slide out
     while (currentY_ATEK > -20 || currentY_MIDAS < 35) {
         ssd1306_Fill(Black);
         if (currentY_ATEK > -20) currentY_ATEK--;

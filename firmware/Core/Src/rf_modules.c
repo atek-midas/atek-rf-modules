@@ -85,11 +85,11 @@ const IOPin_t PINS_ATEK256N3[] = { {GPIOA, GPIO_PIN_8} };// HW not ready
 // DAC Module (ATEK366P5) No physical discrete connection
 
 typedef struct {
-    const char* name;          // Modülün ekranda görünen ismi
-    uint8_t num_pins;          // Kaç adet kontrol pini var?
-    uint8_t max_states;        // Kaç kademesi var?
-    bool is_dac;               // DAC kullanıyor mu?
-    const IOPin_t* ctrl_pins;  // BU MODÜLE AİT PİN DİZİSİNİN İŞARETÇİSİ (Pointer)
+    const char* name;          // Module name shown on the display
+    uint8_t num_pins;          // Number of control pins
+    uint8_t max_states;        // Number of states
+    bool is_dac;               // Uses DAC?
+    const IOPin_t* ctrl_pins;  // Pointer to this module's control pin array
 } RF_Module_t;
 
 const RF_Module_t modules[] = {
@@ -98,10 +98,10 @@ const RF_Module_t modules[] = {
     {"ATEK950P6", 3, 8,  false, PINS_ATEK950P6},
     {"ATEK656N5", 3, 6,  false, PINS_ATEK656N5},
     {"ATEK256N3", 1, 2,  false, PINS_ATEK256N3},
-    {"ATEK366P5", 0, 0,  true,  NULL} // Pin dizisi yok (NULL)
+    {"ATEK366P5", 0, 0,  true,  NULL} // No pin array (NULL)
 };
 
-// --- Matrisler ---
+// --- Lookup tables ---
 const uint8_t atek950p6_codes[] = {0x00, 0x06, 0x04, 0x05, 0x02, 0x01, 0x03, 0x07};
 
 const char* atek950p6_freqs[] = {"485 - 810", "670 - 1125", "960 - 1670", "1440-2560", "2140-3850", "3300-5880", "4820-8500", "2 - 9000"};
@@ -109,7 +109,7 @@ const char* atek950p6_freqs[] = {"485 - 810", "670 - 1125", "960 - 1670", "1440-
 const uint8_t ATEK1601_codes[] = {0x00, 0x05, 0x02, 0x03, 0x01, 0x04};
 const char* atek656n5_freqs[] = {"1.9 - 3.5", "2.8 - 5.4", "4.5 - 9.1", "7.1 - 12.3", "9.9 - 15.3", "12.5 - 18"};
 
-const uint16_t atek888p5_freqs[] = {27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112, 150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 530};
+const uint16_t atek888p5_freqs[] = {27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112, 150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 550};
 
 const uint8_t atek256n3_codes[] = {0x00, 0x01};
 
@@ -157,7 +157,7 @@ void RF_HandleButtons(void) {
         step = 10;
       }
 
-      	 // Button Orders Fixed (sağ sol ters olmul düzeltildi. )
+      	 // Button direction fixed (left/right were swapped)
       if (right_pressed) {
         if (current_state > 0) {
           current_state -= step;
@@ -194,8 +194,8 @@ void RF_Update(void) {
     char main_val[16];
     char top_val[20] = "";
 
-    // JENERİK PİN YAPIMIZ BURADA DEVREYE GİRİYOR!
-    // modules[current_module].ctrl_pins ile modülün kendi pinlerini gönderiyoruz.
+    // Generic pin handling:
+    // each module's own control pins are passed via modules[current_module].ctrl_pins.
 
     switch (current_module) {
         case ATEK357P4:
@@ -254,12 +254,12 @@ void RF_Update(void) {
     }
 }
 
-// --- USB CDC TABANLI HABERLEŞME YÖNETİMİ ---
+// --- USB CDC COMMUNICATION HANDLING ---
 char rx_buffer[64];
 uint8_t rx_index = 0;
 bool cmd_ready = false;
 
-// Bu fonksiyon USB'den gelen paketleri harf harf işleyip komut oluşturur
+// Parses incoming USB data byte by byte and assembles commands
 void RF_FeedCDCData(uint8_t* Buf, uint32_t Len) {
     for (uint32_t i = 0; i < Len; i++) {
         uint8_t rx_byte = Buf[i];
@@ -274,43 +274,43 @@ void RF_FeedCDCData(uint8_t* Buf, uint32_t Len) {
     }
 }
 
-// --- SİSTEM HAFIZASINA (ROM BOOTLOADER) ZIPLAMA FONKSİYONU ---
+// --- JUMP TO SYSTEM MEMORY (ROM BOOTLOADER) ---
 void JumpToBootloader(void) {
-    // 1. Ekrana Bootloader bilgisini yazdır
+    // 1. Show bootloader info on the display
     HW_UpdateDisplay("SYSTEM", "BOOT MODE", false);
 
-    // 2. USB BAĞLANTISINI FİZİKSEL KOPARILMIŞ GİBİ SİMÜLE ET
+    // 2. Simulate a physical USB disconnect
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG; // Pinleri sağır yap
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG; // Put USB pins in analog (high-Z) mode
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     __HAL_RCC_USB_FORCE_RESET();
-    for(volatile int i=0; i<1500000; i++); // Windows'un kopmayı anlaması için bekle
+    for(volatile int i=0; i<1500000; i++); // Wait for the host to detect the disconnect
     __HAL_RCC_USB_RELEASE_RESET();
-    __HAL_RCC_USB_CLK_DISABLE(); // USB saatini kapat ki Bootloader baştan açabilsin
+    __HAL_RCC_USB_CLK_DISABLE(); // Disable USB clock so the bootloader can re-initialize it
 
-    // 3. Ana şalteri kapatmadan (IRQ), çevre birimlerini ve SysTick'i sıfırla
+    // 3. Reset peripherals and SysTick without globally disabling IRQs
     HAL_DeInit();
     HAL_RCC_DeInit();
     SysTick->CTRL = 0;
     SysTick->LOAD = 0;
     SysTick->VAL = 0;
 
-    // 4. Sadece NVIC (Kesme Yöneticisi) içindeki alt kesmeleri temizle (Cortex-M0)
-    NVIC->ICER[0] = 0xFFFFFFFF; // Bütün aktif kesmeleri devre dışı bırak
-    NVIC->ICPR[0] = 0xFFFFFFFF; // Bekleyen tüm kesmeleri temizle
+    // 4. Clear interrupts in the NVIC only (Cortex-M0)
+    NVIC->ICER[0] = 0xFFFFFFFF; // Disable all interrupts
+    NVIC->ICPR[0] = 0xFFFFFFFF; // Clear all pending interrupts
 
-    // 5. Hafızayı Remap Et (Vektör Tablosunu ROM'a kaydır)
+    // 5. Remap memory (vector table to system ROM)
     __HAL_RCC_SYSCFG_CLK_ENABLE();
     __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
 
-    // 6. STM32F070 ROM Bootloader Adresi
+    // 6. STM32F070 ROM bootloader address
     volatile uint32_t addr = 0x1FFFC800;
     void (*SysMemBootJump)(void) = (void (*)(void)) (*((uint32_t *)(addr + 4)));
 
-    // 7. Stack Pointer'ı ayarla ve zıpla!
+    // 7. Set stack pointer and jump
     __set_MSP(*(uint32_t *)addr);
     SysMemBootJump();
 
@@ -331,7 +331,7 @@ void RF_ProcessSerialCommand(void) {
             case ATEK366P5: strcpy(response, "ATEK366P5\r\n"); break;
             default: strcpy(response, "UNKNOWN\r\n"); break;
         }
-        // YENİ: USB Üzerinden Cevap Gönderme (CDC Transmit)
+        // Send response over USB (CDC)
         CDC_Transmit_FS((uint8_t*)response, strlen(response));
     }
     else if (strncmp(rx_buffer, "SET:", 4) == 0) {
@@ -340,7 +340,7 @@ void RF_ProcessSerialCommand(void) {
 		if (strncmp(&rx_buffer[4], "UPDATE", 6) == 0) {
 			char response[] = "Entering DFU Mode...\r\n";
 			CDC_Transmit_FS((uint8_t*)response, strlen(response));
-			HAL_Delay(50); // Mesajın USB'den yola çıkması için çok kısa bekle
+			HAL_Delay(50); // Short delay to let the message go out over USB
 			JumpToBootloader();
 		}
 		else {
