@@ -1,4 +1,6 @@
 @echo off
+REM SPDX-License-Identifier: MIT
+REM Copyright (c) 2026 ATEK MIDAS
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
@@ -17,7 +19,7 @@ if errorlevel 1 (
 )
 
 REM --- Main python file (fixed name) ---
-set MAIN_FILE=ATEK_RF_MODULES_USER_INTERFACE_v2.0.py
+set MAIN_FILE=ATEK_RF_MODULES_USER_INTERFACE.py
 
 if not exist "%MAIN_FILE%" (
     echo [ERROR] %MAIN_FILE% not found in this folder.
@@ -89,6 +91,10 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+REM --- Copy license files into the distribution folder ---
+copy /y "%~dp0..\LICENSE" "dist\ATEK_RF_MODULES_UI\" >nul
+copy /y "%~dp0..\THIRD_PARTY_NOTICES.md" "dist\ATEK_RF_MODULES_UI\" >nul
 
 echo.
 echo ============================================

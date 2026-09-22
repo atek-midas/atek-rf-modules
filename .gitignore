@@ -39,4 +39,7 @@ Release/
 *.hex
 *.map
 *.list
-*.lstfirmware/.settings/
+*.lst
+
+# STM32CubeIDE local settings
+firmware/.settings/

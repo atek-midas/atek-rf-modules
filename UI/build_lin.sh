@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 ATEK MIDAS
 set -e
 cd "$(dirname "$0")"
 
@@ -15,7 +17,7 @@ if ! command -v python3 &>/dev/null; then
 fi
 
 # --- Main python file (fixed name) ---
-MAIN_FILE="ATEK_RF_MODULES_USER_INTERFACE_v2.0.py"
+MAIN_FILE="ATEK_RF_MODULES_USER_INTERFACE.py"
 
 if [ ! -f "$MAIN_FILE" ]; then
     echo "[ERROR] $MAIN_FILE not found in this folder."
@@ -75,6 +77,9 @@ pyinstaller \
     --clean \
     --noconsole \
     "$MAIN_FILE"
+
+# --- Copy license files into the distribution folder ---
+cp ../LICENSE ../THIRD_PARTY_NOTICES.md dist/ATEK_RF_MODULES_UI/
 
 deactivate
 

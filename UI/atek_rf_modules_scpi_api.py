@@ -48,7 +48,6 @@ Quick start
         dev.set_state(3)                        # generic, works for every module
         print(dev.get_state())
 
-Copyright (c) ATEK MIDAS. All rights reserved.
 """
 
 from __future__ import annotations
