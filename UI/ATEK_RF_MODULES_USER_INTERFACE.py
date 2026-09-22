@@ -1,20 +1,21 @@
 """
 ATEK RF MODULES USER INTERFACE
 Industrial Design | Full OOP Architecture | Thread-Safe Communication | Embedded Assets
+
+Communication is handled by atek_rf_modules_scpi_api.py (must be in the same folder).
 """
 
 import customtkinter as ctk
-import serial
-import serial.tools.list_ports
-import threading
-import queue
 import time
+import queue
 import os
 import sys
 import subprocess
 import base64
 from io import BytesIO
 from PIL import Image
+
+import atek_rf_modules_scpi_api as atek
 
 
 # --- Configuration ---
@@ -112,66 +113,13 @@ def open_embedded_pdf(filename, log_callback):
         log_callback("ERR", f"Failed to open PDF: {e}", COLORS["danger"])
 
 # ---------------------------------------------------------
-# COMMUNICATION ENGINE (Thread-Safe)
-# ---------------------------------------------------------
-class SerialEngine:
-    def __init__(self, log_callback, rx_callback):
-        self.ser = None
-        self.tx_queue = queue.Queue()
-        self.running = False
-        self.log_callback = log_callback
-        self.rx_callback = rx_callback
-
-    def connect(self, port, baud):
-        if self.ser and self.ser.is_open:
-            self.disconnect()
-        try:
-            self.ser = serial.Serial(port, baudrate=baud, timeout=1)
-            self.running = True
-            threading.Thread(target=self._io_loop, daemon=True).start()
-            self.log_callback("SYS", f"Connected to {port} (@{baud} baud)", COLORS["success"])
-            return True
-        except Exception as e:
-            self.log_callback("ERR", f"Connection Error: {e}", COLORS["danger"])
-            return False
-
-    def disconnect(self):
-        self.running = False
-        time.sleep(0.1)
-        if self.ser and self.ser.is_open:
-            self.ser.close()
-        self.log_callback("SYS", "Disconnected", COLORS["danger"])
-
-    def send(self, data: bytes):
-        if self.running:
-            self.tx_queue.put(data)
-
-    def _io_loop(self):
-        while self.running:
-            if not self.tx_queue.empty():
-                try:
-                    data = self.tx_queue.get()
-                    self.ser.write(data)
-                    text_str = data.decode('utf-8', errors='ignore').strip()
-                    self.log_callback("TX", text_str, COLORS["accent"])
-                except Exception as e:
-                    self.log_callback("ERR", f"TX Error: {e}", COLORS["danger"])
-
-            if self.ser.in_waiting > 0:
-                try:
-                    rx_data = self.ser.read(self.ser.in_waiting)
-                    self.rx_callback(rx_data)
-                except:
-                    pass
-            time.sleep(0.01)
-
-# ---------------------------------------------------------
 # UI COMPONENTS (OOP & DATASHEET LOGIC)
 # ---------------------------------------------------------
 class BasePanel(ctk.CTkFrame):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
-        self.engine = engine
+        self.send_state = send_state
+        self.ready = False  # Set by App after construction; no commands are sent while building the UI
         self.module_id = module_id
         self.info = MODULES[module_id]
         self.log_callback = log_callback
@@ -191,6 +139,10 @@ class BasePanel(ctk.CTkFrame):
                       command=lambda: open_embedded_pdf(self.info["datasheet"], self.log_callback)).pack(side="right")
         ctk.CTkLabel(header, text=self.info["name"], font=("Courier New", 12), text_color=COLORS["text_muted"]).pack(anchor="w", padx=15, pady=(0, 15))
 
+    def send(self, state):
+        if self.ready:
+            self.send_state(state)
+
     def create_card(self):
         card = ctk.CTkFrame(self, fg_color=COLORS["bg_panel"], corner_radius=10, border_width=1, border_color=COLORS["border"])
         card.pack(fill="x", pady=5)
@@ -200,8 +152,8 @@ class BasePanel(ctk.CTkFrame):
         pass
 
 class AttenuatorPanel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.val = 0
         self.leds = []
         self.build_ui()
@@ -234,7 +186,7 @@ class AttenuatorPanel(BasePanel):
         self.val = max(0, min(31, new_val))
         self.lbl_val.configure(text=f"{self.val:02d}")
         self.slider.set(self.val)
-        self.engine.send(f"SET:{self.val}\n".encode('utf-8'))
+        self.send(self.val)
 
         bin_str = f"{self.val:05b}"
         for i, bit in enumerate(bin_str):
@@ -253,8 +205,8 @@ class AttenuatorPanel(BasePanel):
         self.update_val(next_val)
 
 class TunableLPFPanel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.frequencies = [
             27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112,
             150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 550
@@ -276,7 +228,7 @@ class TunableLPFPanel(BasePanel):
         mhz_exact = self.frequencies[band - 1]
         self.lbl_band.configure(text=f"Band {band} ({mhz_exact} MHz)")
         self.slider.set(band)
-        self.engine.send(f"SET:{band - 1}\n".encode('utf-8'))
+        self.send(band - 1)
 
     def sync_from_hardware(self, val):
         band = val + 1
@@ -290,8 +242,8 @@ class TunableLPFPanel(BasePanel):
         self.update_val(next_val)
 
 class FilterBank8Panel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.buttons = []
         self.current_idx = 0
         self.bands = [
@@ -322,7 +274,7 @@ class FilterBank8Panel(BasePanel):
         self.current_idx = idx
         for i, btn in enumerate(self.buttons):
             btn.configure(fg_color=COLORS["accent"] if i == idx else COLORS["bg_element"], text_color=COLORS["bg_main"] if i == idx else COLORS["text_main"])
-        self.engine.send(f"SET:{idx}\n".encode('utf-8'))
+        self.send(idx)
 
     def sync_from_hardware(self, val):
         self.current_idx = val
@@ -335,8 +287,8 @@ class FilterBank8Panel(BasePanel):
         self.set_band(next_val)
 
 class FilterBank6Panel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.buttons = []
         self.current_idx = 0
         self.bands = [
@@ -365,7 +317,7 @@ class FilterBank6Panel(BasePanel):
         self.current_idx = idx
         for i, btn in enumerate(self.buttons):
             btn.configure(fg_color=COLORS["accent"] if i == idx else COLORS["bg_element"], text_color=COLORS["bg_main"] if i == idx else COLORS["text_main"])
-        self.engine.send(f"SET:{idx}\n".encode('utf-8'))
+        self.send(idx)
 
     def sync_from_hardware(self, val):
         self.current_idx = val
@@ -378,8 +330,8 @@ class FilterBank6Panel(BasePanel):
         self.set_band(next_val)
 
 class SPDTSwitchPanel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.btn_rf1 = None
         self.btn_rf2 = None
         self.current_state = 0
@@ -404,7 +356,7 @@ class SPDTSwitchPanel(BasePanel):
         else:
             self.btn_rf2.configure(fg_color=COLORS["success"], text_color="#FFF")
             self.btn_rf1.configure(fg_color=COLORS["bg_element"], text_color=COLORS["text_muted"])
-        self.engine.send(f"SET:{state}\n".encode('utf-8'))
+        self.send(state)
 
     def sync_from_hardware(self, val):
         self.current_state = val
@@ -420,8 +372,8 @@ class SPDTSwitchPanel(BasePanel):
         self.set_switch(next_val)
 
 class PhaseShifterPanel(BasePanel):
-    def __init__(self, master, engine, module_id, log_callback, **kwargs):
-        super().__init__(master, engine, module_id, log_callback, **kwargs)
+    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
+        super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.current_index = 0
         self.build_ui()
 
@@ -444,7 +396,7 @@ class PhaseShifterPanel(BasePanel):
 
         dac_value = int((voltage / 10.0) * 255)
         self.lbl_info.configure(text=f"Calculated DAC Output: 0x{dac_value:02X}")
-        self.engine.send(f"SET:{self.current_index}\n".encode('utf-8'))
+        self.send(self.current_index)
         self.slider.set(self.current_index)
 
     def sync_from_hardware(self, val):
@@ -471,17 +423,32 @@ class App(ctk.CTk):
         self.geometry("950x750")
         self.configure(fg_color=COLORS["bg_main"])
 
-        self.engine = SerialEngine(self.log, self.process_rx)
+        self.device = None  # atek.AtekRFModule instance while connected
         self.active_panel = None
-        self.rx_buffer = ""
+        # Tk is not thread-safe: API callbacks run in a background thread, so every
+        # UI update is queued here and executed by the main thread (see process_ui_queue).
+        self.ui_queue = queue.Queue()
 
-        # YENİ: Variable holding demo mode state (Disabled by default)
+        # Variable holding demo mode state (Disabled by default)
         self.demo_mode_active = ctk.BooleanVar(value=False)
 
         self.setup_layout()
 
         # Timer always runs in the background but executes based on the state variable
         self.after(2000, self.demo_tick)
+        self.after(20, self.process_ui_queue)
+
+    def run_in_ui(self, func):
+        self.ui_queue.put(func)
+
+    def process_ui_queue(self):
+        while True:
+            try:
+                func = self.ui_queue.get_nowait()
+            except queue.Empty:
+                break
+            func()
+        self.after(20, self.process_ui_queue)
 
     def setup_layout(self):
         self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0, fg_color=COLORS["bg_panel"], border_width=1, border_color=COLORS["border"])
@@ -563,7 +530,7 @@ class App(ctk.CTk):
             self.log("SYS", "Demo Mode DISABLED. Manual control restored.", COLORS["accent"])
 
     def refresh_ports(self):
-        ports = [p.device for p in serial.tools.list_ports.comports()]
+        ports = atek.list_serial_ports()
         if not ports:
             ports = ["No COM"]
         self.combo_port.configure(values=ports)
@@ -583,7 +550,11 @@ class App(ctk.CTk):
             btn.pack(fill="x", padx=10, pady=5)
 
         self.select_module(identified_id)
-        self.after(200, lambda: self.engine.send(b"GET?\r\n"))
+        try:
+            state = self.device.get_state()
+            self.active_panel.sync_from_hardware(state)
+        except atek.AtekError as e:
+            self.log("ERR", f"State read failed: {e}", COLORS["danger"])
 
     def clear_identified_module(self):
         if self.active_panel:
@@ -596,39 +567,28 @@ class App(ctk.CTk):
         self.lbl_no_device = ctk.CTkLabel(self.active_module_container, text="No Device Connected", text_color=COLORS["text_muted"], font=("Arial", 12, "italic"))
         self.lbl_no_device.pack(pady=20)
 
-    def process_rx(self, rx_data):
-        text = rx_data.decode('utf-8', errors='ignore')
-        self.rx_buffer += text
+    # --- API callbacks (called from the API reader thread) ---
+    def on_device_state(self, state):
+        def update():
+            if self.active_panel:
+                self.active_panel.sync_from_hardware(state)
+        self.run_in_ui(update)
 
-        if len(self.rx_buffer) > 500:
-            self.rx_buffer = self.rx_buffer[-500:]
+    def on_connection_lost(self, error):
+        def update():
+            self.log("ERR", f"Connection lost: {error}", COLORS["danger"])
+            self.device = None
+            self.btn_conn.configure(text="CONNECT", fg_color=COLORS["success"], hover_color="#1e6e2b")
+            self.clear_identified_module()
+        self.run_in_ui(update)
 
-        while '\n' in self.rx_buffer or '\r' in self.rx_buffer:
-            if '\n' in self.rx_buffer:
-                line, self.rx_buffer = self.rx_buffer.split('\n', 1)
-            else:
-                line, self.rx_buffer = self.rx_buffer.split('\r', 1)
-
-            line = line.strip()
-            if not line: continue
-
-            self.log("RX", line, COLORS["warning"])
-
-            for m_id, m_info in MODULES.items():
-                expected_id = m_info.get("hw_id", m_id)
-
-                if expected_id in line:
-                    self.after(0, lambda m=m_id: self.set_identified_module(m))
-                    self.log("SYS", f"Device Identified via IDN: {expected_id} (Loaded as {m_id})", COLORS["success"])
-                    break
-
-            if line.startswith("STATE:"):
-                try:
-                    state_val = int(line.split(":")[1])
-                    if self.active_panel:
-                        self.after(0, lambda v=state_val: self.active_panel.sync_from_hardware(v))
-                except Exception as e:
-                    self.log("ERR", f"State Parse Error: {e}", COLORS["danger"])
+    def send_state(self, state):
+        if self.device is None or not self.device.is_open:
+            return
+        try:
+            self.device.set_state(state, verify=False)
+        except atek.AtekError as e:
+            self.log("ERR", f"Command failed: {e}", COLORS["danger"])
 
     def select_module(self, module_id):
         if self.active_panel:
@@ -636,23 +596,24 @@ class App(ctk.CTk):
 
         m_type = MODULES[module_id]["type"]
         if m_type == "attenuator":
-            self.active_panel = AttenuatorPanel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = AttenuatorPanel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "tunable_lpf":
-            self.active_panel = TunableLPFPanel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = TunableLPFPanel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "filterbank_8":
-            self.active_panel = FilterBank8Panel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = FilterBank8Panel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "filterbank_6":
-            self.active_panel = FilterBank6Panel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = FilterBank6Panel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "spdt_switch":
-            self.active_panel = SPDTSwitchPanel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = SPDTSwitchPanel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "phase_shifter":
-            self.active_panel = PhaseShifterPanel(self.content_frame, self.engine, module_id, self.log)
+            self.active_panel = PhaseShifterPanel(self.content_frame, self.send_state, module_id, self.log)
 
+        self.active_panel.ready = True
         self.active_panel.pack(fill="both", expand=True)
         self.log("SYS", f"Module Loaded: {module_id}", COLORS["accent"])
 
     def toggle_conn(self):
-        if not self.engine.running:
+        if self.device is None:
             port = self.combo_port.get()
 
             if port in ["No COM", "Loading...", ""]:
@@ -660,14 +621,28 @@ class App(ctk.CTk):
                 return
 
             baud = int(self.combo_baud.get())
-            if self.engine.connect(port, baud):
-                self.btn_conn.configure(text="DISCONNECT", fg_color=COLORS["danger"], hover_color="#c93832")
-                self.after(200, lambda: self.engine.send(b"*IDN?\r\n"))
+            try:
+                self.device = atek.connect(
+                    port, baudrate=baud,
+                    on_tx=lambda line: self.log("TX", line, COLORS["accent"]),
+                    on_rx=lambda line: self.log("RX", line, COLORS["warning"]),
+                    on_state_change=self.on_device_state,
+                    on_disconnect=self.on_connection_lost)
+            except atek.AtekError as e:
+                self.log("ERR", f"Connection Error: {e}", COLORS["danger"])
+                return
+
+            self.log("SYS", f"Connected to {port} (@{baud} baud)", COLORS["success"])
+            self.log("SYS", f"Device Identified via IDN: {self.device.model}", COLORS["success"])
+            self.btn_conn.configure(text="DISCONNECT", fg_color=COLORS["danger"], hover_color="#c93832")
+            if self.device.model in MODULES:
+                self.set_identified_module(self.device.model)
         else:
-            self.engine.disconnect()
+            self.device.close()
+            self.device = None
+            self.log("SYS", "Disconnected", COLORS["danger"])
             self.btn_conn.configure(text="CONNECT", fg_color=COLORS["success"], hover_color="#1e6e2b")
             self.clear_identified_module()
-            self.rx_buffer = ""
 
     def log(self, prefix, msg, color):
         def update():
@@ -677,11 +652,11 @@ class App(ctk.CTk):
             self.log_box.tag_config(tag_name, foreground=color)
             self.log_box.insert("end", log_text, tag_name)
             self.log_box.see("end")
-        self.after(0, update)
+        self.run_in_ui(update)
 
     # Timer always runs, but triggers panel change only if the switch is enabled
     def demo_tick(self):
-        if self.demo_mode_active.get() and self.engine.running and self.active_panel:
+        if self.demo_mode_active.get() and self.device is not None and self.device.is_open and self.active_panel:
             self.active_panel.next_demo_state()
 
         self.after(2000, self.demo_tick)
