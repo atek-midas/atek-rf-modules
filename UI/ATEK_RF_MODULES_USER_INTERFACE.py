@@ -1,4 +1,13 @@
+
+
 """
+===========================================================================
+===========================================================================
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 ATEK MIDAS
+===========================================================================
+===========================================================================
+
 ATEK RF MODULES USER INTERFACE
 Industrial Design | Full OOP Architecture | Thread-Safe Communication | Embedded Assets
 
@@ -503,7 +512,7 @@ class App(ctk.CTk):
         self.btn_refresh = ctk.CTkButton(port_row, text="⟳", width=25, fg_color=COLORS["bg_element"], border_width=1, border_color=COLORS["border"], hover_color=COLORS["border"], command=self.refresh_ports)
         self.btn_refresh.pack(side="left")
 
-        self.combo_baud = ctk.CTkComboBox(conn_frame, values=["9600", "115200"], width=120)
+        self.combo_baud = ctk.CTkComboBox(conn_frame, values=["115200"], width=120)
         self.combo_baud.set("115200")
         self.combo_baud.pack(pady=5)
 

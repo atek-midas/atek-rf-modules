@@ -1,3 +1,9 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 ATEK MIDAS
+ */
+
+
 #include "rf_modules.h"
 #include "hw.h"
 #include "main.h"

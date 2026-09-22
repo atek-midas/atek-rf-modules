@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 ATEK MIDAS
+ */
+
 #include "hw.h"
 #include "ssd1306.h"
 #include <string.h>

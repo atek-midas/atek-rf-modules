@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 ATEK MIDAS
+ */
+
 #ifndef RF_MODULES_H
 #define RF_MODULES_H
 

@@ -32,6 +32,13 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 ATEK MIDAS
+ */
+
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

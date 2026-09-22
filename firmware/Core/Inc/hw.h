@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * Copyright (c) 2026 ATEK MIDAS
+ */
+
 #ifndef HW_H
 #define HW_H
 
