@@ -506,7 +506,6 @@ PyInstaller may also generate temporary `.spec` files. These files are ignored b
   see `THIRD_PARTY_NOTICES.md`.
 - **Datasheets, manuals, the ATEK MIDAS name and logo** are not covered by
   the MIT License. © ATEK MIDAS, all rights reserved.
-for the complete license text.
 
 ---
 
