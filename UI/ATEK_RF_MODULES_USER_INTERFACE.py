@@ -28,8 +28,6 @@ except ImportError:
     print("Warning: assets.py not found. PDFs and Logo will not load.")
 
 # --- Theme and Color Palette ---
-
-# --- Theme and Color Palette ---
 ctk.set_appearance_mode("light")
 
 COLORS = {
