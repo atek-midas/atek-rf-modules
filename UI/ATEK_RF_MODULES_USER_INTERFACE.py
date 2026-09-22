@@ -21,6 +21,7 @@ import os
 import sys
 import subprocess
 import base64
+import webbrowser
 from io import BytesIO
 from PIL import Image
 
@@ -29,6 +30,8 @@ import atek_rf_modules_scpi_api as atek
 
 # --- Configuration ---
 SHOW_DEMO_MODE_BUTTON = False
+APP_VERSION = "2.1.0"
+REPO_URL = "https://github.com/atek-midas/atek-rf-modules"
 
 # --- Import embedded assets ---
 try:
@@ -120,6 +123,37 @@ def open_embedded_pdf(filename, log_callback):
         log_callback("SYS", f"Datasheet opened: {filename}", COLORS["accent"])
     except Exception as e:
         log_callback("ERR", f"Failed to open PDF: {e}", COLORS["danger"])
+
+def find_local_file(filename):
+    """Look for a file next to the executable / script, or one folder above (repository root)."""
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    for folder in (base, os.path.dirname(base)):
+        path = os.path.join(folder, filename)
+        if os.path.isfile(path):
+            return path
+    return None
+
+def open_file_or_repo_page(filename, log_callback):
+    """Open a local copy of the file; fall back to the file on GitHub."""
+    path = find_local_file(filename)
+    try:
+        if path is None:
+            url = f"{REPO_URL}/blob/main/{filename}"
+            webbrowser.open(url)
+            log_callback("SYS", f"{filename} opened online: {url}", COLORS["accent"])
+            return
+        if sys.platform == "win32":
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+        log_callback("SYS", f"Opened: {filename}", COLORS["accent"])
+    except Exception as e:
+        log_callback("ERR", f"Failed to open {filename}: {e}", COLORS["danger"])
 
 # ---------------------------------------------------------
 # UI COMPONENTS (OOP & DATASHEET LOGIC)
@@ -423,6 +457,63 @@ class PhaseShifterPanel(BasePanel):
         self.update_val(next_val)
 
 # ---------------------------------------------------------
+# ABOUT WINDOW
+# ---------------------------------------------------------
+class AboutWindow(ctk.CTkToplevel):
+    def __init__(self, master, log_callback):
+        super().__init__(master)
+        self.log_callback = log_callback
+        self.title("About")
+        # Open centred over the main window
+        master.update_idletasks()
+        x = master.winfo_rootx() + (master.winfo_width() - 440) // 2
+        y = master.winfo_rooty() + (master.winfo_height() - 380) // 3
+        self.geometry(f"440x380+{max(x, 0)}+{max(y, 0)}")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_panel"])
+        self.transient(master)
+
+        logo_img = get_image_from_base64("logo_new-300x86.png", size=(200, 57))
+        if logo_img:
+            ctk.CTkLabel(self, image=logo_img, text="").pack(pady=(25, 10))
+        else:
+            ctk.CTkLabel(self, text="ATEK MIDAS", font=("Arial", 24, "bold"), text_color=COLORS["accent"]).pack(pady=(25, 10))
+
+        ctk.CTkLabel(self, text="ATEK RF Modules User Interface", font=("Arial", 16, "bold"),
+                     text_color=COLORS["text_main"]).pack(pady=(5, 2))
+        ctk.CTkLabel(self, text=f"Version {APP_VERSION}   |   Python API {atek.__version__}", font=("Arial", 12),
+                     text_color=COLORS["text_muted"]).pack(pady=(0, 12))
+
+        ctk.CTkLabel(self, text="\u00a9 2026 ATEK MIDAS", font=("Arial", 12), text_color=COLORS["text_main"]).pack()
+        ctk.CTkLabel(self, text="Source code licensed under the MIT License.\n"
+                                "Third-party components remain under their own licenses.",
+                     font=("Arial", 11), text_color=COLORS["text_muted"], justify="center").pack(pady=(4, 8))
+
+        link = ctk.CTkLabel(self, text=REPO_URL, font=("Arial", 11, "underline"), text_color=COLORS["accent"], cursor="hand2")
+        link.pack(pady=(0, 16))
+        link.bind("<Button-1>", lambda e: webbrowser.open(REPO_URL))
+
+        btn_row = ctk.CTkFrame(self, fg_color="transparent")
+        btn_row.pack(pady=(0, 20))
+        btn_style = dict(height=30, fg_color=COLORS["bg_element"], text_color=COLORS["text_main"],
+                         border_width=1, border_color=COLORS["border"], hover_color=COLORS["border"])
+        ctk.CTkButton(btn_row, text="License", width=90,
+                      command=lambda: open_file_or_repo_page("LICENSE", self.log_callback), **btn_style).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Third-Party Notices", width=150,
+                      command=lambda: open_file_or_repo_page("THIRD_PARTY_NOTICES.md", self.log_callback), **btn_style).pack(side="left", padx=5)
+        ctk.CTkButton(btn_row, text="Close", width=80, fg_color=COLORS["accent"], hover_color=COLORS["accent_hover"],
+                      command=self.destroy).pack(side="left", padx=5)
+
+        self.after(150, self._bring_to_front)
+
+    def _bring_to_front(self):
+        try:
+            self.lift()
+            self.focus_force()
+        except Exception:
+            pass
+
+# ---------------------------------------------------------
 # MAIN APPLICATION
 # ---------------------------------------------------------
 class App(ctk.CTk):
@@ -434,6 +525,7 @@ class App(ctk.CTk):
 
         self.device = None  # atek.AtekRFModule instance while connected
         self.active_panel = None
+        self.about_window = None
         # Tk is not thread-safe: API callbacks run in a background thread, so every
         # UI update is queued here and executed by the main thread (see process_ui_queue).
         self.ui_queue = queue.Queue()
@@ -490,6 +582,13 @@ class App(ctk.CTk):
         if SHOW_DEMO_MODE_BUTTON:
             self.demo_switch.pack(side="bottom", pady=20, padx=20, anchor="w")
 
+        # About button pinned to the bottom of the sidebar
+        self.btn_about = ctk.CTkButton(self.sidebar, text="About", width=120, height=28,
+                                       fg_color="transparent", text_color=COLORS["text_muted"],
+                                       border_width=1, border_color=COLORS["border"],
+                                       hover_color=COLORS["bg_element"], command=self.show_about)
+        self.btn_about.pack(side="bottom", pady=(0, 20) if SHOW_DEMO_MODE_BUTTON else 20)
+
         self.main_area = ctk.CTkFrame(self, fg_color="transparent")
         self.main_area.pack(side="right", fill="both", expand=True)
 
@@ -524,6 +623,13 @@ class App(ctk.CTk):
         self.log_box.insert("end", "System Initialized. Awaiting Hardware Connection...\n")
 
         self.refresh_ports()
+
+    def show_about(self):
+        if self.about_window is not None and self.about_window.winfo_exists():
+            self.about_window.lift()
+            self.about_window.focus_force()
+            return
+        self.about_window = AboutWindow(self, self.log)
 
     # Function triggered when toggling the demo mode switch
     def on_demo_toggle(self):
