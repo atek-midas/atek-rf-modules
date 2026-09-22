@@ -76,6 +76,7 @@ pyinstaller \
     --noupx \
     --clean \
     --noconsole \
+    --hidden-import PIL._tkinter_finder \
     "$MAIN_FILE"
 
 # --- Copy license files into the distribution folder ---
