@@ -16,6 +16,10 @@ import base64
 from io import BytesIO
 from PIL import Image
 
+
+# --- Configuration ---
+SHOW_DEMO_MODE_BUTTON = False
+
 # --- Import embedded assets ---
 try:
     from assets import ASSETS
@@ -24,22 +28,24 @@ except ImportError:
     print("Warning: assets.py not found. PDFs and Logo will not load.")
 
 # --- Theme and Color Palette ---
-ctk.set_appearance_mode("dark")
+
+# --- Theme and Color Palette ---
+ctk.set_appearance_mode("light")
 
 COLORS = {
-    "bg_main": "#0D1117",
-    "bg_panel": "#161B22",
-    "bg_element": "#21262D",
-    "border": "#30363D",
-    "accent": "#58A6FF",
-    "accent_hover": "#79C0FF",
-    "warning": "#D2A8FF",
-    "danger": "#F85149",
-    "success": "#238636",
-    "text_main": "#C9D1D9",
-    "text_muted": "#8B949E",
-    "led_off": "#101010",
-    "led_on": "#39FF14"
+    "bg_main": "#F3F4F6",
+    "bg_panel": "#FFFFFF",
+    "bg_element": "#E5E7EB",
+    "border": "#D1D5DB",
+    "accent": "#0366D6",
+    "accent_hover": "#005CC5",
+    "warning": "#B08800",
+    "danger": "#D73A49",
+    "success": "#28A745",
+    "text_main": "#24292E",
+    "text_muted": "#586069",
+    "led_off": "#E1E4E8",
+    "led_on": "#28A745"
 }
 
 # --- Module Database & Datasheet Links ---
@@ -50,7 +56,7 @@ MODULES = {
     },
     "ATEK1801": {
         "hw_id": "ATEK888P5",
-        "name": "20-530 MHz 32-State USB-Controlled Low Pass Filter",
+        "name": "20-550 MHz 32-State USB-Controlled Low Pass Filter",
         "type": "tunable_lpf", "icon": "▱", "datasheet": "ATEK888P5.pdf"
     },
     "ATEK950P6": {
@@ -467,12 +473,12 @@ class App(ctk.CTk):
         self.active_panel = None
         self.rx_buffer = ""
 
-        # YENİ: Demo mod durumunu tutan değişken (Varsayılan olarak Kapalı)
+        # YENİ: Variable holding demo mode state (Disabled by default)
         self.demo_mode_active = ctk.BooleanVar(value=False)
 
         self.setup_layout()
 
-        # Timer her zaman arka planda döner ama işlem yapıp yapmayacağına değişkene bakarak karar verir
+        # Timer always runs in the background but executes based on the state variable
         self.after(2000, self.demo_tick)
 
     def setup_layout(self):
@@ -486,11 +492,10 @@ class App(ctk.CTk):
         else:
             ctk.CTkLabel(self.sidebar, text="ATEK MIDAS", font=("Arial", 24, "bold"), text_color=COLORS["accent"]).pack(pady=(25, 10))
 
-        # Standart Başlık
+        # Standard Title
         self.lbl_title = ctk.CTkLabel(self.sidebar, text="", font=("Arial", 12, "bold"), text_color=COLORS["text_muted"])
         self.lbl_title.pack(pady=(10, 15))
 
-        # YENİ: Uyarı etiketini oluşturduk ama HİÇ GÖSTERMEDİK (pack yapmadık)
         self.demo_warning_lbl = ctk.CTkLabel(self.sidebar, text="⚠️ DEMO MODE ACTIVE", font=("Arial", 14, "bold"), text_color="#161B22", fg_color=COLORS["warning"], corner_radius=5)
 
         self.active_module_container = ctk.CTkFrame(self.sidebar, fg_color="transparent")
@@ -499,11 +504,13 @@ class App(ctk.CTk):
         self.lbl_no_device = ctk.CTkLabel(self.active_module_container, text="No Device Connected", text_color=COLORS["text_muted"], font=("Arial", 12, "italic"))
         self.lbl_no_device.pack(pady=20)
 
-        # YENİ: Demo Modu Şalteri (Switch) en alta sabitlendi
+        # Demo Mode Switch pinned to the bottom
         self.demo_switch = ctk.CTkSwitch(self.sidebar, text="Demo Mode", font=("Arial", 12),
                                          variable=self.demo_mode_active, command=self.on_demo_toggle,
                                          progress_color=COLORS["warning"], button_color=COLORS["text_main"])
-        self.demo_switch.pack(side="bottom", pady=20, padx=20, anchor="w")
+
+        if SHOW_DEMO_MODE_BUTTON:
+            self.demo_switch.pack(side="bottom", pady=20, padx=20, anchor="w")
 
         self.main_area = ctk.CTkFrame(self, fg_color="transparent")
         self.main_area.pack(side="right", fill="both", expand=True)
@@ -540,15 +547,15 @@ class App(ctk.CTk):
 
         self.refresh_ports()
 
-    # YENİ: Demo modunu şalterden değiştirdiğimizde çalışacak fonksiyon
+    # Function triggered when toggling the demo mode switch
     def on_demo_toggle(self):
         if self.demo_mode_active.get():
-            # Demo açık ise başlığın üstüne sarı uyarıyı koy
+            # If demo is enabled, place the yellow warning above the title
             self.lbl_title.pack_forget()
             self.demo_warning_lbl.pack(pady=(10, 15), padx=20, fill="x", before=self.active_module_container)
             self.log("SYS", "Demo Mode ENABLED. Auto-cycling started.", COLORS["warning"])
         else:
-            # Demo kapalı ise sarı uyarıyı kaldır, normal başlığı geri getir
+            # If demo is disabled, remove the yellow warning and restore the normal title
             self.demo_warning_lbl.pack_forget()
             self.lbl_title.pack(pady=(10, 15), before=self.active_module_container)
             self.log("SYS", "Demo Mode DISABLED. Manual control restored.", COLORS["accent"])
@@ -670,7 +677,7 @@ class App(ctk.CTk):
             self.log_box.see("end")
         self.after(0, update)
 
-    # YENİ: Timer her zaman çalışır ama şalter açıksa panel değişimini tetikler
+    # Timer always runs, but triggers panel change only if the switch is enabled
     def demo_tick(self):
         if self.demo_mode_active.get() and self.engine.running and self.active_panel:
             self.active_panel.next_demo_state()
