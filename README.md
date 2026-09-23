@@ -42,6 +42,16 @@ sudo usermod -aG dialout $USER
 
 Keep the extracted folder together; the executable alone does not run. If the application reports an unexpected error, it saves the details to `error_log.txt`; please include this file when contacting ATEK MIDAS support.
 
+## Documentation
+
+The programming documentation is in the [`docs/`](docs) folder:
+
+- [ATEK RF Modules Programming Manual](docs/ATEK_RF_Modules_Programming_Manual.pdf) – connection, command set, Python API and firmware update, common to all modules
+- [ATEK1801 Programming Supplement](docs/ATEK1801_Programming_Supplement.pdf)
+- [ATEK1601 Programming Supplement](docs/ATEK1601_Programming_Supplement.pdf)
+
+---
+
 ## Overview
 
 This repository contains:
@@ -49,7 +59,7 @@ This repository contains:
 - A common embedded firmware project for multiple ATEK MIDAS RF modules
 - A Python API for controlling the modules from your own software
 - A cross-platform desktop user interface built on that API
-- Module datasheets
+- Module datasheets and programming documentation
 - Automated Windows and Linux builds and releases (GitHub Actions)
 - Embedded UI assets such as the ATEK MIDAS logo and module datasheets
 
@@ -136,6 +146,13 @@ atek-rf-modules/
 │   ├── assets.py
 │   ├── ATEK_MIDAS.ico
 │   └── logo_new-300x86.png
+│
+├── docs/
+│   ├── README.md
+│   ├── ATEK_RF_Modules_Programming_Manual.pdf
+│   ├── ATEK1801_Programming_Supplement.pdf
+│   ├── ATEK1601_Programming_Supplement.pdf
+│   └── source/                             # Editable Word versions
 │
 ├── datasheets/
 │   ├── README.md
@@ -308,7 +325,9 @@ with atek.connect("COM5") as dev:       # "/dev/ttyACM0" on Linux
 
 `atek.find_devices()` scans the serial ports and returns the connected ATEK modules. `atek.connect()` returns a module-specific class, for example `atek.TunableLowPassFilter` for the ATEK1801 or `atek.ATEK1601` for the ATEK1601, with methods such as `set_band()` and `set_frequency_mhz()`.
 
-A complete example is provided in `UI/example_basic_usage.py`:
+A complete example is provided in `UI/example_basic_usage.py`. The full API reference is in the [Programming Manual](docs/ATEK_RF_Modules_Programming_Manual.pdf); the Programming Supplements show examples of the module-specific classes.
+
+Running the example:
 
 ```bash
 python UI/example_basic_usage.py          # finds the module automatically
