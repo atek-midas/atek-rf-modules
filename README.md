@@ -48,7 +48,7 @@ This repository contains:
 - A Python API for controlling the modules from your own software
 - A cross-platform desktop user interface built on that API
 - Module datasheets
-- Windows and Linux executable build scripts
+- Automated Windows and Linux builds and releases (GitHub Actions)
 - Embedded UI assets such as the ATEK MIDAS logo and module datasheets
 
 The connected RF module identifies itself over USB CDC. The desktop application detects the module automatically and loads the appropriate control interface.
@@ -83,7 +83,7 @@ The firmware uses a common source code base. The target RF module is selected be
 ### Desktop User Interface
 
 - Cross-platform Python application built on the Python API
-- Windows and Linux executable build scripts
+- Ready-to-run Windows and Linux packages
 - Automatic serial port detection
 - Automatic connected-module identification
 - Module-specific control panels
@@ -133,9 +133,7 @@ atek-rf-modules/
 │   ├── ConvertFilestoBase64.py
 │   ├── assets.py
 │   ├── ATEK_MIDAS.ico
-│   ├── logo_new-300x86.png
-│   ├── build_win.bat
-│   └── build_lin.sh
+│   └── logo_new-300x86.png
 │
 ├── datasheets/
 │   ├── README.md
@@ -404,132 +402,85 @@ The `ConvertFilestoBase64.py` utility is intended for regenerating the embedded 
 
 ---
 
-# Building the Desktop Application
+# Building and Releasing the Desktop Application
 
-The supplied scripts automatically:
+The Windows and Linux packages are built automatically on GitHub's servers by the workflow in `.github/workflows/release.yml`. No local build tools are needed.
 
-- Check for Python
-- Install the required Python packages
-- Install PyInstaller
-- Remove previous build outputs
-- Build the application using PyInstaller
-- Disable UPX compression
-- Generate a directory-based executable package
-- Copy `LICENSE` and `THIRD_PARTY_NOTICES.md` into the package
+The workflow:
 
-The application is built using PyInstaller's `--onedir` mode.
+- Checks that the release tag matches `APP_VERSION`
+- Builds the Windows package on Windows
+- Builds the Linux package on Ubuntu 22.04, so that it also runs on newer distributions
+- Adds `LICENSE` and `THIRD_PARTY_NOTICES.md` to both packages
+- Publishes both packages as a GitHub Release
 
-This means the executable must be distributed together with the other files in its generated directory.
+The packages use PyInstaller's `--onedir` mode: the executable must always be distributed together with the other files in its folder.
 
 ---
 
-## Windows Executable
+## Publishing a Release
 
-Open Command Prompt or Git Bash and run:
+**1. Set the version.** Edit `APP_VERSION` in `UI/ATEK_RF_MODULES_USER_INTERFACE.py`:
 
-```bat
-UI\build_win.bat
+```python
+APP_VERSION = "2.2.0"
 ```
 
-The build script creates:
-
-```text
-UI\dist\ATEK_RF_MODULES_UI\
-```
-
-The Windows executable is:
-
-```text
-UI\dist\ATEK_RF_MODULES_UI\ATEK_RF_MODULES_UI.exe
-```
-
-Distribute the entire directory:
-
-```text
-UI\dist\ATEK_RF_MODULES_UI\
-```
-
-Do not distribute only the `.exe` file.
-
-The Windows build uses:
-
-- Directory-based packaging
-- No UPX compression
-- No console window
-- ATEK MIDAS application icon, when available
-
----
-
-## Linux Executable
-
-First, make the build script executable:
+**2. Commit and push the change:**
 
 ```bash
-chmod +x UI/build_lin.sh
+git add UI/ATEK_RF_MODULES_USER_INTERFACE.py
+git commit -m "Version 2.2.0"
+git push
 ```
 
-Run the script:
+**3. Create and push a tag with the same version, prefixed with `v`:**
 
 ```bash
-./UI/build_lin.sh
+git tag v2.2.0
+git push origin v2.2.0
 ```
 
-The build script creates:
+**4. Follow the build** in the **Actions** tab. After a few minutes the release appears under **Releases** with two files:
 
 ```text
-UI/dist/ATEK_RF_MODULES_UI/
+ATEK_RF_MODULES_UI_v2.2.0_windows_x64.zip
+ATEK_RF_MODULES_UI_v2.2.0_linux_x64.tar.gz
 ```
 
-The Linux executable is:
-
-```text
-UI/dist/ATEK_RF_MODULES_UI/ATEK_RF_MODULES_UI
-```
-
-Distribute the entire directory:
-
-```text
-UI/dist/ATEK_RF_MODULES_UI/
-```
-
-Do not distribute only the executable file.
-
-Build on the oldest Linux distribution you want to support: the package runs on the build distribution and newer ones, but not on older ones.
+The download link at the top of this README always points to the newest release.
 
 ---
 
-## Automated Builds and Releases
+## Test Build Without a Release
 
-The workflow in `.github/workflows/release.yml` builds the Windows and Linux packages on GitHub's servers.
-
-**Test build (no release):** open the **Actions** tab, select **Build and release UI** and click **Run workflow**. The packages are available under **Artifacts** on the run page.
-
-**Release:**
-
-1. Update `APP_VERSION` in `UI/ATEK_RF_MODULES_USER_INTERFACE.py`, commit and push.
-2. Create and push a tag with the same version:
-
-```bash
-git tag v2.1.0
-git push origin v2.1.0
-```
-
-The workflow checks that the tag matches `APP_VERSION`, builds both packages (Linux on Ubuntu 22.04 for wide compatibility) and publishes them as a GitHub Release.
+Open the **Actions** tab, select **Build and release UI** and click **Run workflow**. Both packages are built but no release is published. The packages can be downloaded under **Artifacts** at the bottom of the run page.
 
 ---
 
-## Build Output Directories
+## Correcting a Release
 
-The following directories are generated automatically and should not be committed:
+If the tag does not match `APP_VERSION`, the workflow stops before building. Delete the tag, fix the version and tag again:
 
-```text
-UI/build/
-UI/dist/
-UI/venv/
-UI/*.spec
+```bash
+git tag -d v2.2.0
+git push --delete origin v2.2.0
 ```
 
-The PyInstaller `.spec` file is generated by the build scripts on every build and is not part of the repository.
+To rebuild a release that was already published, first delete the release on the **Releases** page, then delete the tag with the commands above, and push the tag again.
+
+---
+
+## Building Locally (optional)
+
+A local build is only needed for testing without GitHub. From the `UI/` directory:
+
+```bash
+python -m pip install customtkinter pyserial pillow pyinstaller
+python -m PyInstaller --name ATEK_RF_MODULES_UI --onedir --noupx --clean --noconsole --hidden-import PIL._tkinter_finder ATEK_RF_MODULES_USER_INTERFACE.py
+```
+
+On Windows, add `--icon=ATEK_MIDAS.ico`. The result is created in `UI/dist/ATEK_RF_MODULES_UI/`. The generated `build/`, `dist/` and `.spec` files are ignored by Git.
 
 ---
 
@@ -537,18 +488,18 @@ The PyInstaller `.spec` file is generated by the build scripts on every build an
 
 - `ATEK_RF_MODULES_USER_INTERFACE.py` is the desktop UI entry point.
 - All module communication goes through `atek_rf_modules_scpi_api.py`.
-- The build scripts expect the UI source file, the API file, `assets.py`, logo, and icon to remain in the same `UI/` directory.
+- The build expects the UI source file, the API file, `assets.py`, logo, and icon to remain in the same `UI/` directory.
 - The Python API uses a background serial reader thread.
 - UI updates are passed safely to the main application thread.
 - Datasheets are opened using the operating system's default PDF viewer.
-- The application supports Windows, Linux, and macOS source execution, although executable build scripts are currently supplied only for Windows and Linux.
+- The application supports Windows, Linux, and macOS source execution, although packages are currently built only for Windows and Linux.
 
 ---
 
 ## License
 
 - **Source code** (firmware sources written by ATEK MIDAS, Python API,
-  desktop UI, examples, build scripts): MIT License, see `LICENSE`.
+  desktop UI, examples, build workflow): MIT License, see `LICENSE`.
 - **Third-party components** (STM32 HAL, CMSIS, STM32 USB Device Library,
   SSD1306 driver, Python packages) remain under their own licenses,
   see `THIRD_PARTY_NOTICES.md`.
