@@ -23,6 +23,8 @@ Ready-to-run Windows and Linux packages are published on the Releases page of th
 
 No Python installation is required.
 
+Earlier versions, including v1.0.0, are listed on the [Releases page](https://github.com/atek-midas/atek-rf-modules/releases).
+
 **Windows:** extract the zip file and run `ATEK_RF_MODULES_UI.exe` from the extracted folder.
 
 **Linux:**
