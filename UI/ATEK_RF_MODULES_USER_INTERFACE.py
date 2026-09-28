@@ -118,8 +118,6 @@ threading.excepthook = lambda args: handle_exception(
 import customtkinter as ctk
 import time
 import queue
-import os
-import sys
 import subprocess
 import base64
 import webbrowser
@@ -131,7 +129,7 @@ import atek_rf_modules_scpi_api as atek
 
 # --- Configuration ---
 SHOW_DEMO_MODE_BUTTON = False
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 REPO_URL = "https://github.com/atek-midas/atek-rf-modules"
 
 # --- Import embedded assets ---
@@ -139,7 +137,7 @@ try:
     from assets import ASSETS
 except ImportError:
     ASSETS = {}
-    print("Warning: assets.py not found. PDFs and Logo will not load.")
+    print("Warning: assets.py not found. Logo will not load.")
 
 # --- Theme and Color Palette ---
 ctk.set_appearance_mode("light")
@@ -161,36 +159,38 @@ COLORS = {
 }
 
 # --- Module Database & Datasheet Links ---
+# Module names are the *IDN? responses. The datasheet button opens the module page on atekmidas.com.
+# NOTE: only ATEK1801 and ATEK1601 have ready hardware; the other modules are HW NOT READY.
+DATASHEET_BASE_URL = "https://atekmidas.com/products/modules/"
+
 MODULES = {
-    "ATEK357P4": {
-        "name": "LF-20 GHz 5-Bit Digital Attenuator",
-        "type": "attenuator", "icon": "►", "datasheet": "ATEK357P4.pdf"
-    },
     "ATEK1801": {
-        "hw_id": "ATEK1801",
-        "name": "20-550 MHz 32-State USB-Controlled Low Pass Filter",
-        "type": "tunable_lpf", "icon": "▱", "datasheet": "ATEK888P5.pdf"
-    },
-    "ATEK950P6": {
-        "name": "485-8000 MHz Switchable Filter Bank",
-        "type": "filterbank_8", "icon": "≡", "datasheet": "ATEK950P6.pdf"
+        "name": "20-550 MHz Digitally Tunable 32 State LPF",
+        "type": "tunable_lpf", "icon": "▱", "datasheet": DATASHEET_BASE_URL + "atek1801/"
     },
     "ATEK1601": {
-        "hw_id": "ATEK1601",
-        "name": "2-18 GHz Sub-Octave USB-Controlled Filter Bank",
-        "type": "filterbank_6", "icon": "≣", "datasheet": "ATEK656N5.pdf"
+        "name": "2-18 GHz Switched 6 BPF Bank",
+        "type": "filterbank_6", "icon": "≣", "datasheet": DATASHEET_BASE_URL + "atek1601/"
     },
-    "ATEK256N3": {
-        "name": "LF-20 GHz Absorptive SPDT Switch",
-        "type": "spdt_switch", "icon": "⇌", "datasheet": "ATEK256N3.pdf"
+    "ATEK1231": {   # HW not ready
+        "name": "LF-18 GHz 5-bit 31 dB Digital Step Attenuator",
+        "type": "attenuator", "icon": "►", "datasheet": DATASHEET_BASE_URL + "atek1231/"
     },
-    "ATEK366P5": {
-        "name": "2-18 GHz 180° Analog Phase Shifter",
-        "type": "phase_shifter", "icon": "≈", "datasheet": "ATEK366P5.pdf"
-    }
+    "ATEK1001": {   # HW not ready
+        "name": "485-8000 MHz Pre-Selector Filter Bank",
+        "type": "filterbank_8", "icon": "≡", "datasheet": DATASHEET_BASE_URL + "atek1001/"
+    },
+    "ATEK1202": {   # HW not ready (ATEK1201 / ATEK1202 to be confirmed)
+        "name": "LF-24 GHz Absorptive SPDT Switch",
+        "type": "spdt_switch", "icon": "⇌", "datasheet": DATASHEET_BASE_URL + "atek1202/"
+    },
+    "ATEK1201": {   # HW not ready (ATEK1201 / ATEK1202 to be confirmed)
+        "name": "LF-28 GHz Absorptive SPDT Switch",
+        "type": "spdt_switch", "icon": "⇌", "datasheet": DATASHEET_BASE_URL + "atek1201/"
+    },
 }
 
-# --- Utility Functions for Embedded Assets ---
+# --- Utility Functions ---
 def get_image_from_base64(filename, size=(200, 60)):
     b64_str = ASSETS.get(filename, "")
     if not b64_str:
@@ -203,27 +203,13 @@ def get_image_from_base64(filename, size=(200, 60)):
     except:
         return None
 
-def open_embedded_pdf(filename, log_callback):
-    b64_str = ASSETS.get(filename, "")
-    if not b64_str:
-        log_callback("ERR", f"Datasheet {filename} not found in assets.py", COLORS["danger"])
-        return
-
-    temp_path = os.path.join(os.environ.get('TEMP', '/tmp'), filename)
+def open_datasheet(url, log_callback):
+    """Open the module datasheet page on atekmidas.com in the default web browser."""
     try:
-        if not os.path.exists(temp_path):
-            with open(temp_path, "wb") as f:
-                f.write(base64.b64decode(b64_str))
-
-        if sys.platform == "win32":
-            os.startfile(temp_path)
-        elif sys.platform == "darwin":
-            subprocess.call(["open", temp_path])
-        else:
-            subprocess.call(["xdg-open", temp_path])
-        log_callback("SYS", f"Datasheet opened: {filename}", COLORS["accent"])
+        webbrowser.open(url)
+        log_callback("SYS", f"Datasheet opened: {url}", COLORS["accent"])
     except Exception as e:
-        log_callback("ERR", f"Failed to open PDF: {e}", COLORS["danger"])
+        log_callback("ERR", f"Failed to open datasheet: {e}", COLORS["danger"])
 
 def find_local_file(filename):
     """Look for a file next to the executable / script, or one folder above (repository root)."""
@@ -280,7 +266,7 @@ class BasePanel(ctk.CTkFrame):
                       text_color=COLORS["text_main"],  # <-- THIS WAS ADDED
                       border_width=1, border_color=COLORS["border"],
                       hover_color=COLORS["border"],
-                      command=lambda: open_embedded_pdf(self.info["datasheet"], self.log_callback)).pack(side="right")
+                      command=lambda: open_datasheet(self.info["datasheet"], self.log_callback)).pack(side="right")
         ctk.CTkLabel(header, text=self.info["name"], font=("Courier New", 12), text_color=COLORS["text_muted"]).pack(anchor="w", padx=15, pady=(0, 15))
 
     def send(self, state):
@@ -390,15 +376,16 @@ class FilterBank8Panel(BasePanel):
         super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.buttons = []
         self.current_idx = 0
+        # Band n = state n-1 (the control codes are applied by the firmware)
         self.bands = [
-            {"name": "Band 1 (485-810 MHz)",   "code": 0x00},
-            {"name": "Band 2 (670-1125 MHz)",  "code": 0x06},
-            {"name": "Band 3 (960-1670 MHz)",  "code": 0x04},
-            {"name": "Band 4 (1440-2560 MHz)", "code": 0x05},
-            {"name": "Band 5 (2140-3850 MHz)", "code": 0x02},
-            {"name": "Band 6 (3300-5880 MHz)", "code": 0x01},
-            {"name": "Band 7 (4820-8500 MHz)", "code": 0x03},
-            {"name": "External Bypass",        "code": 0x07}
+            {"name": "Band 1 (485-810 MHz)"},
+            {"name": "Band 2 (670-1125 MHz)"},
+            {"name": "Band 3 (960-1670 MHz)"},
+            {"name": "Band 4 (1440-2560 MHz)"},
+            {"name": "Band 5 (2140-3850 MHz)"},
+            {"name": "Band 6 (3300-5880 MHz)"},
+            {"name": "Band 7 (4820-8500 MHz)"},   # TODO: upper limit not confirmed yet (8500 or 8000 MHz)
+            {"name": "External Bypass"}
         ]
         self.build_ui()
 
@@ -435,13 +422,14 @@ class FilterBank6Panel(BasePanel):
         super().__init__(master, send_state, module_id, log_callback, **kwargs)
         self.buttons = []
         self.current_idx = 0
+        # Band n = state n-1 (the control codes are applied by the firmware)
         self.bands = [
-            {"name": "Band 1 (1.9-3.5 GHz)",  "code": 0x07},
-            {"name": "Band 2 (2.8-5.4 GHz)",  "code": 0x02},
-            {"name": "Band 3 (4.5-9.1 GHz)",  "code": 0x05},
-            {"name": "Band 4 (7.1-12.3 GHz)", "code": 0x04},
-            {"name": "Band 5 (9.9-15.3 GHz)", "code": 0x06},
-            {"name": "Band 6 (12.5-18 GHz)",  "code": 0x03}
+            {"name": "Band 1 (1.9-3.5 GHz)"},
+            {"name": "Band 2 (2.8-5.4 GHz)"},
+            {"name": "Band 3 (4.5-9.1 GHz)"},
+            {"name": "Band 4 (7.1-12.3 GHz)"},
+            {"name": "Band 5 (9.9-15.3 GHz)"},
+            {"name": "Band 6 (12.5-18 GHz)"}
         ]
         self.build_ui()
 
@@ -514,48 +502,6 @@ class SPDTSwitchPanel(BasePanel):
     def next_demo_state(self):
         next_val = 1 if self.current_state == 0 else 0
         self.set_switch(next_val)
-
-class PhaseShifterPanel(BasePanel):
-    def __init__(self, master, send_state, module_id, log_callback, **kwargs):
-        super().__init__(master, send_state, module_id, log_callback, **kwargs)
-        self.current_index = 0
-        self.build_ui()
-
-    def build_ui(self):
-        ctrl_card = self.create_card()
-        self.lbl_val = ctk.CTkLabel(ctrl_card, text="0.0 V", font=("Courier New", 48, "bold"), text_color=COLORS["text_main"])
-        self.lbl_val.pack(pady=(20, 0))
-
-        self.lbl_info = ctk.CTkLabel(ctrl_card, text="Calculated DAC Output: 0x00", font=("Courier New", 12), text_color=COLORS["warning"])
-        self.lbl_info.pack(pady=(0, 10))
-
-        self.slider = ctk.CTkSlider(self, from_=0, to=100, number_of_steps=100, command=self.update_val)
-        self.slider.set(0.0)
-        self.slider.pack(fill="x", padx=20, pady=25)
-
-    def update_val(self, value):
-        self.current_index = int(round(float(value)))
-        voltage = self.current_index * 0.1
-        self.lbl_val.configure(text=f"{voltage:.1f} V")
-
-        dac_value = int((voltage / 10.0) * 255)
-        self.lbl_info.configure(text=f"Calculated DAC Output: 0x{dac_value:02X}")
-        self.send(self.current_index)
-        self.slider.set(self.current_index)
-
-    def sync_from_hardware(self, val):
-        self.current_index = val
-        voltage = val * 0.1
-        self.lbl_val.configure(text=f"{voltage:.1f} V")
-        dac_value = int((voltage / 10.0) * 255)
-        self.lbl_info.configure(text=f"Calculated DAC Output: 0x{dac_value:02X}")
-        self.slider.set(val)
-
-    def next_demo_state(self):
-        next_val = self.current_index + 10
-        if next_val > 100:
-            next_val = 0
-        self.update_val(next_val)
 
 # ---------------------------------------------------------
 # ABOUT WINDOW
@@ -763,7 +709,7 @@ class App(ctk.CTk):
 
         info = MODULES.get(identified_id)
         if info:
-            ctk.CTkLabel(self.active_module_container, text=f"CONNECTED:", font=("Arial", 10, "bold"), text_color=COLORS["text_muted"]).pack(anchor="w", padx=10)
+            ctk.CTkLabel(self.active_module_container, text="CONNECTED:", font=("Arial", 10, "bold"), text_color=COLORS["text_muted"]).pack(anchor="w", padx=10)
             btn = ctk.CTkButton(self.active_module_container, text=f"{info['icon']}  {identified_id}  ●", anchor="w",
                                 fg_color="transparent", text_color=COLORS["success"],
                                 hover_color=COLORS["bg_element"], state="normal")
@@ -825,8 +771,6 @@ class App(ctk.CTk):
             self.active_panel = FilterBank6Panel(self.content_frame, self.send_state, module_id, self.log)
         elif m_type == "spdt_switch":
             self.active_panel = SPDTSwitchPanel(self.content_frame, self.send_state, module_id, self.log)
-        elif m_type == "phase_shifter":
-            self.active_panel = PhaseShifterPanel(self.content_frame, self.send_state, module_id, self.log)
 
         self.active_panel.ready = True
         self.active_panel.pack(fill="both", expand=True)

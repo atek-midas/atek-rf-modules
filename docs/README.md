@@ -3,12 +3,12 @@
 | Document | Content |
 |---|---|
 | [ATEK RF Modules Programming Manual](ATEK_RF_Modules_Programming_Manual.pdf) | Connection, command set, state reporting, Python API, firmware update – common to all modules |
-| [ATEK1801 Programming Supplement](ATEK1801_Programming_Supplement.pdf) | ATEK1801 (RF chip ATEK888P5) – states, commands, Python class and example |
+| [ATEK1801 Programming Supplement](ATEK1801_Programming_Supplement.pdf) | ATEK1801 (RF chip ATEK888BP5) – states, commands, Python class and example |
 | [ATEK1601 Programming Supplement](ATEK1601_Programming_Supplement.pdf) | ATEK1601 (RF chip ATEK656N5) – states, commands, Python class and example |
 
 The example program referred to in the Programming Manual is [`UI/example_basic_usage.py`](../UI/example_basic_usage.py).
 
-RF performance data is found in the RF chip datasheets in [`datasheets/`](../datasheets).
+RF performance data is found in the module datasheets on the [ATEK MIDAS website](https://atekmidas.com/products/modules/).
 
 The editable Word versions of the documents are in [`source/`](source).
 

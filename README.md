@@ -59,9 +59,9 @@ This repository contains:
 - A common embedded firmware project for multiple ATEK MIDAS RF modules
 - A Python API for controlling the modules from your own software
 - A cross-platform desktop user interface built on that API
-- Module datasheets and programming documentation
+- Programming documentation (module datasheets are on [atekmidas.com](https://atekmidas.com/products/modules/))
 - Automated Windows and Linux builds and releases (GitHub Actions)
-- Embedded UI assets such as the ATEK MIDAS logo and module datasheets
+- Embedded UI assets (ATEK MIDAS logo)
 
 The connected RF module identifies itself over USB CDC. The desktop application detects the module automatically and loads the appropriate control interface.
 
@@ -101,7 +101,7 @@ The firmware uses a common source code base. The target RF module is selected be
 - Module-specific control panels
 - Real-time TX and RX logging
 - Hardware state synchronization, including front-panel button changes
-- Embedded PDF datasheet viewer
+- Datasheet button that opens the module page on [atekmidas.com](https://atekmidas.com/products/modules/)
 - Demo mode (hidden by default)
 - About window with version and license information
 
@@ -109,18 +109,18 @@ The firmware uses a common source code base. The target RF module is selected be
 
 ## Supported RF Modules
 
-| Module (`*IDN?` response) | RF chip | Description | States |
-|---|---|---|---|
-| ATEK1801 | ATEK888P5 | 20–550 MHz 32-state USB-controlled low-pass filter | 32 |
-| ATEK1601 | ATEK656N5 | 2–18 GHz sub-octave USB-controlled filter bank | 6 |
-| ATEK950P6 | ATEK950P6 | 485–8500 MHz switchable filter bank (7 bands + bypass) | 8 |
-| ATEK357P4 | ATEK357P4 | LF–20 GHz 5-bit digital attenuator | 32 |
-| ATEK256N3 | ATEK256N3 | LF–20 GHz absorptive SPDT switch | 2 |
-| ATEK366P5 | ATEK366P5 | 2–18 GHz 180° analog phase shifter | 101 |
+| Module (`*IDN?` response) | RF chip | Description | States | Hardware |
+|---|---|---|---|---|
+| [ATEK1801](https://atekmidas.com/products/modules/atek1801/) | ATEK888BP5 | 20–550 MHz digitally tunable 32-state LPF | 32 | Ready |
+| [ATEK1601](https://atekmidas.com/products/modules/atek1601/) | ATEK656N5 | 2–18 GHz switched 6 BPF bank | 6 | Ready |
+| [ATEK1231](https://atekmidas.com/products/modules/atek1231/) | ATEK357P4 | LF–18 GHz 5-bit 31 dB digital step attenuator | 32 | Not ready |
+| [ATEK1001](https://atekmidas.com/products/modules/atek1001/) | ATEK950P6 | 485–8000 MHz pre-selector filter bank (7 bands + bypass) | 8 | Not ready |
+| [ATEK1202](https://atekmidas.com/products/modules/atek1202/) | ATEK256N3 | LF–24 GHz absorptive SPDT switch | 2 | Not ready |
+| ATEK_PS_TBD | ATEK366P5 | 2–18 GHz 180° analog phase shifter (module name TBD) | 101 | Not ready |
 
-> The **Module** name is the identifier returned by the `*IDN?` command. The **RF chip** is the device used inside the module; the datasheets in `datasheets/` are named after the RF chip.
+> The **Module** name is the identifier returned by the `*IDN?` command. The **RF chip** is the device used inside the module. Module datasheets are on the linked product pages.
 
-> DAC control for the ATEK366P5 analog phase shifter is not yet implemented in the firmware.
+> Modules marked *Not ready* are prepared in the code, but their hardware, pin mapping and chip-to-module assignment are not yet confirmed. The analog phase shifter (ATEK_PS_TBD, chip ATEK366P5) has no module name yet and its DAC control is not implemented; it is not shown in the desktop UI.
 
 > Verify the GPIO mapping and target-board hardware revision before compiling or deploying a firmware variant.
 
@@ -153,15 +153,6 @@ atek-rf-modules/
 │   ├── ATEK1801_Programming_Supplement.pdf
 │   ├── ATEK1601_Programming_Supplement.pdf
 │   └── source/                             # Editable Word versions
-│
-├── datasheets/
-│   ├── README.md
-│   ├── ATEK256N3.pdf
-│   ├── ATEK357P4.pdf
-│   ├── ATEK366P5.pdf
-│   ├── ATEK656N5.pdf
-│   ├── ATEK888P5.pdf
-│   └── ATEK950P6.pdf
 │
 ├── .github/
 │   └── workflows/
@@ -217,10 +208,10 @@ Replace the argument with one of the supported module definitions:
 ```c
 RF_Init(ATEK1801);
 RF_Init(ATEK1601);
-RF_Init(ATEK950P6);
-RF_Init(ATEK357P4);
-RF_Init(ATEK256N3);
-RF_Init(ATEK366P5);
+RF_Init(ATEK1231);   // HW not ready
+RF_Init(ATEK1001);   // HW not ready
+RF_Init(ATEK1202);   // HW not ready
+RF_Init(ATEK_PS_TBD);  // HW not ready, module name TBD
 ```
 
 Only one module must be selected for each firmware build.
@@ -279,7 +270,7 @@ Commands are ASCII, case-sensitive and terminated using carriage return, line fe
 |---|---|---|
 | `*IDN?` | Returns the module name | e.g. `ATEK1801` |
 | `GET?` | Returns the current state index | `STATE:<n>` |
-| `SET:<n>` | Selects state `n` | `STATE:<n>` if accepted, nothing if `n` is out of range |
+| `SET:<n>` | Selects state `n` | `STATE:<n>` if accepted, nothing if `n` is invalid or out of range |
 | `SET:UPDATE` | Enters the STM32 system bootloader | `Entering DFU Mode...`, then USB disconnects |
 
 ### State Reporting
@@ -405,7 +396,7 @@ While active, the UI automatically advances the module state at regular interval
 
 ## Embedded Assets
 
-The desktop UI loads the ATEK MIDAS logo and PDF datasheets from:
+The desktop UI loads the ATEK MIDAS logo from:
 
 ```text
 UI/assets.py
@@ -413,13 +404,9 @@ UI/assets.py
 
 The assets are stored as Base64-encoded data, allowing them to be included in packaged executable distributions.
 
-The source PDF files remain available separately in:
+Datasheets are not embedded: the **Open Datasheet** button opens the module page on `https://atekmidas.com/products/modules/<module>/` in the default web browser.
 
-```text
-datasheets/
-```
-
-The `ConvertFilestoBase64.py` utility is intended for regenerating the embedded asset data when logos or datasheets are updated.
+The `ConvertFilestoBase64.py` utility is intended for regenerating the embedded asset data when the logo is updated.
 
 ---
 
@@ -512,7 +499,7 @@ On Windows, add `--icon=ATEK_MIDAS.ico`. The result is created in `UI/dist/ATEK_
 - The build expects the UI source file, the API file, `assets.py`, logo, and icon to remain in the same `UI/` directory.
 - The Python API uses a background serial reader thread.
 - UI updates are passed safely to the main application thread.
-- Datasheets are opened using the operating system's default PDF viewer.
+- Datasheets are opened as module pages on atekmidas.com in the default web browser.
 - The application supports Windows, Linux, and macOS source execution, although packages are currently built only for Windows and Linux.
 
 ---

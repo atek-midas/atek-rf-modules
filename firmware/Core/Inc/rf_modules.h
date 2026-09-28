@@ -10,13 +10,16 @@
 #include <stdbool.h>
 
 // RF Modules List
+// Module names follow https://atekmidas.com/products/modules/ (the name is also the *IDN? response).
+// NOTE: only ATEK1801 and ATEK1601 have ready hardware. The other entries are
+//       HW NOT READY: module assignment not yet confirmed, pin mapping not verified.
 typedef enum {
-  ATEK357P4,  	// 5-Bit Attenuator 	, Chip MFG#:
-  ATEK1801,  	// Tunable LPF 			, Chip MFG#: ATEK888P5
-  ATEK950P6,  	// Filterbank 8 		, Chip MFG#:
-  ATEK1601,  	// Filterbank 6 		,  Chip MFG#: ATEK656N5
-  ATEK256N3,  	// SPDT Switch 			, Chip MFG#:
-  ATEK366P5   	// Phase Shifter (DAC) 	, Chip MFG#:
+  ATEK1231,     // 5-Bit Attenuator         (HW not ready)
+  ATEK1801,     // Tunable LPF
+  ATEK1001,     // Filterbank 8             (HW not ready)
+  ATEK1601,     // Filterbank 6
+  ATEK1202,     // SPDT Switch              (HW not ready, ATEK1201 or ATEK1202 to be confirmed)
+  ATEK_PS_TBD   // Phase Shifter (DAC)      (HW not ready, module name TBD, DAC not implemented)
 } ModuleType_t;
 
 

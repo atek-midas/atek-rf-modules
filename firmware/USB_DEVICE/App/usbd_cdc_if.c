@@ -283,6 +283,9 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
   USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+  if (hcdc == NULL || hUsbDeviceFS.dev_state != USBD_STATE_CONFIGURED){
+    return USBD_FAIL;   // No host connected: class data not allocated yet
+  }
   if (hcdc->TxState != 0){
     return USBD_BUSY;
   }
@@ -293,6 +296,23 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+/**
+  * @brief  Returns 1 when the device is enumerated by a host (CDC class ready).
+  */
+uint8_t CDC_IsConnected(void)
+{
+  return (hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED && hUsbDeviceFS.pClassData != NULL) ? 1U : 0U;
+}
+
+/**
+  * @brief  Returns 1 while the previous IN transfer is still in progress.
+  */
+uint8_t CDC_IsTxBusy(void)
+{
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
+  return (hcdc != NULL && hcdc->TxState != 0) ? 1U : 0U;
+}
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 

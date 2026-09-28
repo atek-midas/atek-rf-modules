@@ -48,7 +48,6 @@
 I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
-extern uint8_t rx_byte;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -115,12 +114,12 @@ int main(void)
 
   // SELECT THE ACTIVE MODULE HERE:
   /*
-  ATEK256N3 — SPDT Switch (1 CTRL pin, HIGH/LOW)
-  ATEK357P4 — 5-bit Attenuator (P1–P5)
-  ATEK366P5 — Analog Phase Shifter (driven by DAC, 0–10V)
-  ATEK656N5 — Switchable Filterbank (CTRLA/B/C, negative voltage –5V)
-  ATEK888P5 — Tunable LPF (CTRL1–5)
-  ATEK950P6 — Switchable Filter Bank (CTRLA/B/C)
+  ATEK1801    — Tunable LPF (CTRL1–5)
+  ATEK1601    — Switchable Filterbank (CTRLA/B/C, negative voltage –5V)
+  ATEK1231    — 5-bit Attenuator (P1–P5)                    — HW not ready
+  ATEK1001    — Switchable Filter Bank (CTRLA/B/C)          — HW not ready
+  ATEK1202    — SPDT Switch (1 CTRL pin, HIGH/LOW)          — HW not ready
+  ATEK_PS_TBD — Analog Phase Shifter (DAC, 0–10V)           — HW not ready, module name TBD
   */
 
   RF_Init(ATEK1601);

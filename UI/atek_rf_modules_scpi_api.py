@@ -44,7 +44,7 @@ Quick start
     import atek_rf_modules_scpi_api as atek
 
     with atek.connect("COM5") as dev:          # "/dev/ttyACM0" on Linux
-        print(dev.model)                        # e.g. "ATEK950P6"
+        print(dev.model)                        # e.g. "ATEK1801"
         dev.set_state(3)                        # generic, works for every module
         print(dev.get_state())
 
@@ -61,17 +61,17 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple
 import serial
 import serial.tools.list_ports
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "__version__",
     # Errors
     "AtekError", "AtekConnectionError", "AtekTimeoutError", "AtekStateError",
     # Data
-    "ModuleInfo", "DeviceInfo", "MODULES",
+    "ModuleInfo", "DeviceInfo", "MODULES", "LEGACY_IDS",
     # Device classes
     "AtekRFModule", "Attenuator", "TunableLowPassFilter", "FilterBank",
-    "ATEK950P6", "ATEK1601", "SPDTSwitch", "PhaseShifter",
+    "ATEK1001", "ATEK950P6", "ATEK1601", "SPDTSwitch", "PhaseShifter",
     # Functions
     "connect", "find_devices", "list_serial_ports",
 ]
@@ -120,14 +120,30 @@ class ModuleInfo:
         return self.num_states - 1
 
 
+# Module names follow https://atekmidas.com/products/modules/ and are returned by *IDN?.
+# NOTE: only ATEK1801 and ATEK1601 have ready hardware. ATEK1231, ATEK1001, ATEK1202 and
+#       ATEK_PS_TBD are HW NOT READY (module name / chip mapping not yet confirmed).
 MODULES: Dict[str, ModuleInfo] = {
-    "ATEK357P4": ModuleInfo("ATEK357P4", "ATEK357P4", "LF-20 GHz 5-Bit Digital Attenuator", "attenuator", 32),
-    "ATEK1801":  ModuleInfo("ATEK1801", "ATEK888P5", "20-550 MHz 32-State USB-Controlled Low Pass Filter", "tunable_lpf", 32),
-    "ATEK950P6": ModuleInfo("ATEK950P6", "ATEK950P6", "485-8500 MHz Switchable Filter Bank", "filter_bank", 8),
-    "ATEK1601":  ModuleInfo("ATEK1601", "ATEK656N5", "2-18 GHz Sub-Octave USB-Controlled Filter Bank", "filter_bank", 6),
-    "ATEK256N3": ModuleInfo("ATEK256N3", "ATEK256N3", "LF-20 GHz Absorptive SPDT Switch", "spdt_switch", 2),
-    "ATEK366P5": ModuleInfo("ATEK366P5", "ATEK366P5", "2-18 GHz 180 deg Analog Phase Shifter", "phase_shifter", 101,
-                            available=False),
+    "ATEK1801":  ModuleInfo("ATEK1801", "ATEK888BP5", "20-550 MHz Digitally Tunable 32 State LPF", "tunable_lpf", 32),
+    "ATEK1601":  ModuleInfo("ATEK1601", "ATEK656N5", "2-18 GHz Switched 6 BPF Bank", "filter_bank", 6),
+    "ATEK1231":  ModuleInfo("ATEK1231", "ATEK357P4", "LF-18 GHz 5-bit 31 dB Digital Step Attenuator", "attenuator", 32,
+                            available=False),   # HW not ready
+    "ATEK1001":  ModuleInfo("ATEK1001", "ATEK950P6", "485-8000 MHz Pre-Selector Filter Bank", "filter_bank", 8,
+                            available=False),   # HW not ready
+    "ATEK1202":  ModuleInfo("ATEK1202", "ATEK256N3", "LF-24 GHz Absorptive SPDT Switch", "spdt_switch", 2,
+                            available=False),   # HW not ready
+    "ATEK1201":  ModuleInfo("ATEK1201", "", "LF-28 GHz Absorptive SPDT Switch", "spdt_switch", 2,
+                            available=False),   # HW not ready (ATEK1201 / ATEK1202 to be confirmed)
+    "ATEK_PS_TBD": ModuleInfo("ATEK_PS_TBD", "ATEK366P5", "2-18 GHz 180 deg Analog Phase Shifter", "phase_shifter", 101,
+                              available=False),   # HW not ready, module name TBD
+}
+
+# *IDN? answers of older firmware builds (chip names) -> current module names
+LEGACY_IDS: Dict[str, str] = {
+    "ATEK357P4": "ATEK1231",
+    "ATEK950P6": "ATEK1001",
+    "ATEK256N3": "ATEK1202",
+    "ATEK366P5": "ATEK_PS_TBD",
 }
 
 
@@ -290,6 +306,7 @@ class AtekRFModule:
         """Send *IDN? and return (and store) the module name."""
         resp = self.query("*IDN?", accept=lambda line: not line.startswith(STATE_PREFIX))
         self._model = resp.strip()
+        self._model = LEGACY_IDS.get(self._model, self._model)
         if self._model not in MODULES:
             raise AtekError(f"Unknown module ID '{self._model}' on {self.port}")
         return self._model
@@ -434,7 +451,7 @@ class AtekRFModule:
 # Module-specific classes
 # ---------------------------------------------------------------------------
 class Attenuator(AtekRFModule):
-    """ATEK357P4 - 5-bit digital attenuator, 0...31 dB in 1 dB steps (state = dB)."""
+    """ATEK1231 (chip ATEK357P4) - 5-bit digital attenuator, 0...31 dB in 1 dB steps (state = dB). HW not ready."""
     STEP_DB = 1
     MAX_DB = 31
 
@@ -452,7 +469,7 @@ class Attenuator(AtekRFModule):
 
 
 class TunableLowPassFilter(AtekRFModule):
-    """ATEK1801 (chip ATEK888P5) - 32-band low pass filter. Band 1...32 = state 0...31."""
+    """ATEK1801 (chip ATEK888BP5) - 32-band low pass filter. Band 1...32 = state 0...31."""
     CUTOFFS_MHZ: Tuple[int, ...] = (
         27, 28, 29, 30, 31, 32, 33, 34, 48, 51, 55, 58, 68, 75, 95, 112,
         150, 155, 160, 164, 168, 172, 176, 180, 230, 245, 265, 285, 310, 350, 425, 550,
@@ -537,11 +554,15 @@ class FilterBank(AtekRFModule):
         return self.BYPASS_STATE is not None and self.get_state() == self.BYPASS_STATE
 
 
-class ATEK950P6(FilterBank):
-    """ATEK950P6 - 7-band filter bank (485...8500 MHz) with bypass (state 7)."""
+class ATEK1001(FilterBank):
+    """ATEK1001 (chip ATEK950P6) - 7-band filter bank (485...8500 MHz) with bypass (state 7). HW not ready."""
+    # TODO: Band 7 upper limit not confirmed yet (8500 or 8000 MHz, module name says 485-8000 MHz)
     BANDS_MHZ = ((485, 810), (670, 1125), (960, 1670), (1440, 2560),
                  (2140, 3850), (3300, 5880), (4820, 8500))
     BYPASS_STATE = 7
+
+
+ATEK950P6 = ATEK1001    # Old class name, kept for compatibility
 
 
 class ATEK1601(FilterBank):
@@ -551,7 +572,7 @@ class ATEK1601(FilterBank):
 
 
 class SPDTSwitch(AtekRFModule):
-    """ATEK256N3 - SPDT switch. RF1 = state 0, RF2 = state 1."""
+    """ATEK1202 (chip ATEK256N3) - SPDT switch. HW not ready. RF1 = state 0, RF2 = state 1."""
 
     def select(self, rf_port: int, verify: bool = True) -> int:
         """Connect RFC to RF1 (rf_port=1) or RF2 (rf_port=2)."""
@@ -565,16 +586,17 @@ class SPDTSwitch(AtekRFModule):
 
 
 class PhaseShifter(AtekRFModule):
-    """ATEK366P5 - reserved. Not yet supported by the module firmware."""
+    """ATEK_PS_TBD (chip ATEK366P5, module name TBD) - reserved. HW not ready, not yet supported by the module firmware."""
 
 
 _MODEL_CLASSES = {
-    "ATEK357P4": Attenuator,
+    "ATEK1231": Attenuator,
     "ATEK1801": TunableLowPassFilter,
-    "ATEK950P6": ATEK950P6,
+    "ATEK1001": ATEK1001,
     "ATEK1601": ATEK1601,
-    "ATEK256N3": SPDTSwitch,
-    "ATEK366P5": PhaseShifter,
+    "ATEK1202": SPDTSwitch,
+    "ATEK1201": SPDTSwitch,
+    "ATEK_PS_TBD": PhaseShifter,
 }
 
 
@@ -584,7 +606,7 @@ _MODEL_CLASSES = {
 def connect(port: str, **kwargs) -> AtekRFModule:
     """
     Open `port`, identify the module and return the matching class instance
-    (Attenuator, TunableLowPassFilter, ATEK950P6, ATEK1601, SPDTSwitch, ...).
+    (Attenuator, TunableLowPassFilter, ATEK1001, ATEK1601, SPDTSwitch, ...).
     Keyword arguments are passed to AtekRFModule (timeout, callbacks, ...).
     """
     kwargs["open_port"] = True
