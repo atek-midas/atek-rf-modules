@@ -61,7 +61,7 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple
 import serial
 import serial.tools.list_ports
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 __all__ = [
     "__version__",
@@ -80,7 +80,7 @@ DEFAULT_TIMEOUT = 1.0          # [s] maximum wait for a query response
 DEFAULT_BAUDRATE = 115200      # Ignored by USB CDC, kept for pyserial compatibility
 SET_CONFIRM_TIMEOUT = 0.3      # [s] wait for STATE:<n> after SET before falling back to GET?
 STATE_PREFIX = "STATE:"
-MAX_COMMAND_LENGTH = 63        # Firmware receive buffer limit (characters)
+MAX_COMMAND_LENGTH = 15        # Firmware receive buffer limit (characters)
 
 
 # ---------------------------------------------------------------------------
@@ -634,4 +634,4 @@ def find_devices(ports: Optional[Sequence[str]] = None, timeout: float = 0.5) ->
                 found.append(DeviceInfo(port, dev.model, dev.info.description))
         except (AtekError, ValueError, OSError):
             continue
-    return found
+    return found

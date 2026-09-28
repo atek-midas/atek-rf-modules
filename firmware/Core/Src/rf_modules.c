@@ -195,7 +195,7 @@ void RF_HandleButtons(void) {
 // The text is copied into a static buffer because the USB transfer is asynchronous.
 // If no host is connected (USB not configured) the message is dropped.
 #define CDC_TX_TIMEOUT_MS 20
-static char cdc_tx_buffer[64];
+static char cdc_tx_buffer[32];                        // Longest message: "Entering DFU Mode...\r\n" (22)
 
 static void RF_Send(const char* text) {
     if (!CDC_IsConnected()) return;
@@ -288,8 +288,10 @@ void RF_Update(void) {
 // Complete command lines are passed through a small queue (single producer / single
 // consumer), so a new command arriving while the previous one is being processed can
 // no longer overwrite it.
-#define CMD_MAX_LEN     64
-#define CMD_QUEUE_SIZE  8          // Must be a power of two
+// RAM is limited (6 KB): the longest valid command is "SET:UPDATE" (10 characters),
+// so lines longer than CMD_MAX_LEN - 1 = 15 characters are ignored.
+#define CMD_MAX_LEN     16
+#define CMD_QUEUE_SIZE  4          // Must be a power of two
 
 static char line_buffer[CMD_MAX_LEN];                 // Line being received (ISR only)
 static uint8_t line_index = 0;
@@ -319,7 +321,7 @@ void RF_FeedCDCData(uint8_t* Buf, uint32_t Len) {
         } else if (line_index < CMD_MAX_LEN - 1) {
             line_buffer[line_index++] = rx_byte;
         } else {
-            line_overflow = true;                     // Too long: the whole line is ignored
+            line_overflow = true;                     // Too long (> 15 characters): the whole line is ignored
         }
     }
 }
