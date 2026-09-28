@@ -20,6 +20,7 @@ Ready-to-run Windows and Linux packages are published on the Releases page of th
 |---|---|
 | `ATEK_RF_MODULES_UI_v<version>_windows_x64.zip` | Windows 10 or 11, 64-bit |
 | `ATEK_RF_MODULES_UI_v<version>_linux_x64.tar.gz` | 64-bit Linux, glibc 2.35 or newer (e.g. Ubuntu 22.04 and later) |
+| `ATEK_RF_MODULES_firmware_v<version>.zip` | Pre-built module firmware (`.hex`, `.bin`, `.elf`), see [Pre-built Firmware](#pre-built-firmware) |
 
 No Python installation is required.
 
@@ -135,6 +136,7 @@ atek-rf-modules/
 │   ├── Drivers/
 │   ├── Middlewares/
 │   ├── USB_DEVICE/
+│   ├── bin/                                # Pre-built firmware images (.hex, .bin, .elf)
 │   ├── RF_MODULES_MAIN.ioc
 │   └── ...
 │
@@ -223,6 +225,12 @@ RF_Init(ATEK1801);
 ```
 
 This builds the firmware for the ATEK1801 tunable low-pass filter module.
+
+---
+
+## Pre-built Firmware
+
+Ready-to-flash images for ATEK1801 and ATEK1601 are in [`firmware/bin/`](firmware/bin) and are attached to every release as `ATEK_RF_MODULES_firmware_v<version>.zip`. See [`firmware/bin/README.md`](firmware/bin/README.md) for the file formats and the USB DFU update procedure.
 
 ---
 
@@ -420,7 +428,8 @@ The workflow:
 - Builds the Windows package on Windows
 - Builds the Linux package on Ubuntu 22.04, so that it also runs on newer distributions
 - Adds `LICENSE` and `THIRD_PARTY_NOTICES.md` to both packages
-- Publishes both packages as a GitHub Release
+- Packs the pre-built firmware images from `firmware/bin/` into a firmware zip file (the firmware is not compiled by the workflow)
+- Publishes the packages as a GitHub Release
 
 The packages use PyInstaller's `--onedir` mode: the executable must always be distributed together with the other files in its folder.
 
@@ -449,12 +458,15 @@ git tag v2.2.0
 git push origin v2.2.0
 ```
 
-**4. Follow the build** in the **Actions** tab. After a few minutes the release appears under **Releases** with two files:
+**4. Follow the build** in the **Actions** tab. After a few minutes the release appears under **Releases** with three files:
 
 ```text
 ATEK_RF_MODULES_UI_v2.2.0_windows_x64.zip
 ATEK_RF_MODULES_UI_v2.2.0_linux_x64.tar.gz
+ATEK_RF_MODULES_firmware_v2.2.0.zip
 ```
+
+If the firmware changed, build it in STM32CubeIDE and update the images in `firmware/bin/` (see its README) before tagging.
 
 The download link at the top of this README always points to the newest release.
 

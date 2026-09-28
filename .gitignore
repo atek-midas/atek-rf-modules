@@ -42,6 +42,11 @@ Release/
 *.list
 *.lst
 
+# Released firmware images are kept in the repository
+!firmware/bin/*.elf
+!firmware/bin/*.hex
+!firmware/bin/*.bin
+
 # STM32CubeIDE local settings
 firmware/.settings/
 

@@ -129,7 +129,7 @@ import atek_rf_modules_scpi_api as atek
 
 # --- Configuration ---
 SHOW_DEMO_MODE_BUTTON = False
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.2.1"
 REPO_URL = "https://github.com/atek-midas/atek-rf-modules"
 
 # --- Import embedded assets ---
@@ -827,4 +827,4 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     app = App()
-    app.mainloop()
+    app.mainloop()
